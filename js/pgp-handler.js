@@ -235,10 +235,10 @@ class PGPHandler {
    * @param {string} options.name - User's name
    * @param {string} options.email - User's email
    * @param {string} options.passphrase - Passphrase to protect the private key
-   * @param {number} options.keySize - RSA key size (default: 2048)
+   * @param {number} options.keySize - ECC key size (default: 8192)
    * @returns {Promise<Object>} Object containing privateKey, publicKey, and fingerprint
    */
-  async generateKey({ name, email, passphrase, keySize = 2048 }) {
+  async generateKey({ name, email, passphrase, keySize = 8192 }) {
     debugLog("Starting key generation", { name, email, keySize });
 
     try {
@@ -252,7 +252,7 @@ class PGPHandler {
       // Generate key pair using OpenPGP.js
       const { privateKey, publicKey, revocationCertificate } =
         await openpgp.generateKey({
-          type: "rsa", // RSA algorithm
+          type: "ecc", // ECC algorithm
           rsaBits: keySize, // Key size in bits
           userIDs: [{ name, email }], // User identification
           passphrase, // Passphrase to encrypt private key

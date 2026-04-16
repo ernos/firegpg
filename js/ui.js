@@ -422,7 +422,7 @@ class KeyManagement {
         name,
         email,
         passphrase,
-        keySize: 2048,
+        keySize: 16392,
       });
 
       if (result.success) {

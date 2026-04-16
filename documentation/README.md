@@ -4,23 +4,23 @@ A comprehensive Firefox extension for PGP/PGP encryption, decryption, signing, a
 
 ## Features
 
-✨ **Complete PGP Functionality**
-- 🔐 Generate RSA key pairs
-- 🔒 Encrypt messages with public keys
-- 🔓 Decrypt messages with private keys
-- ✍️ Sign messages (cleartext and detached)
-- ✓ Verify signatures
-- 📥 Import/Export keys
-- 🔍 Auto-detect PGP content on web pages
+ **Complete PGP Functionality**
+- Generate RSA key pairs
+- Encrypt messages with public keys
+- Decrypt messages with private keys
+- Sign messages (cleartext and detached)
+- Verify signatures
+- Import/Export keys
+- Auto-detect PGP content on web pages
 
-🎨 **User-Friendly Interface**
+ **User-Friendly Interface**
 - Clean sidebar interface
 - Tab-based navigation
 - Copy-to-clipboard functionality
 - Context menu integration
 - Real-time status feedback
 
-🛠️ **Developer-Friendly**
+ **Developer-Friendly**
 - Extensive code comments
 - Debug logging (toggleable)
 - No minification or obfuscation
@@ -127,29 +127,40 @@ You can use any PNG images (19x19, 38x38, and 64x64 pixels) or create simple pla
 ### Auto-Detection Feature
 
 The extension automatically detects PGP content on web pages and adds action buttons:
-- "🔓 Decrypt with OpenPGP" for encrypted messages
-- "✓ Verify with OpenPGP" for signed messages  
-- "📥 Import with OpenPGP" for public keys
+- " Decrypt with OpenPGP" for encrypted messages
+- " Verify with OpenPGP" for signed messages  
+- " Import with OpenPGP" for public keys
 
 ## Project Structure
 
+## File Structure
+
 ```
 OpenPGP/
-├── manifest.json           # Extension configuration
-├── index.html             # Sidebar UI
+│
+├── manifest.json           # Extension configuration (Manifest V3)
+├── index.html             # Main sidebar UI
+│
+├── js/                    # JavaScript modules
+│   ├── pgp-handler.js     # Core PGP operations (1,080 lines)
+│   ├── ui.js              # UI controllers (780 lines)
+│   ├── background.js      # Background service worker (220 lines)
+│   └── content.js         # Content script for page integration (480 lines)
+│
 ├── css/
-│   └── styles.css         # Sidebar styles
-├── js/
-│   ├── background.js      # Background service worker
-│   ├── content.js         # Content script (page interaction)
-│   ├── pgp-handler.js     # PGP operations handler
-│   └── ui.js              # UI controller
+│   └── styles.css         # Complete styling (570 lines)
+│
 ├── lib/
-│   └── openpgp.min.js     # OpenPGP.js library (download separately)
+│   └── openpgp.min.js     # OpenPGP.js cryptography library
+│
 ├── icon/
-│   ├── icon_gray.png      # 19x19 & 38x38 toolbar icon
-│   └── icon64.png         # 64x64 sidebar icon
-└── README.md              # This file
+│   ├── icon_gray.png      # Toolbar icon (19x19)
+│   └── icon64.png         # Sidebar icon (64x64)
+│
+├── README.md              # Complete documentation
+├── QUICKSTART.md          # Quick start guide
+├── setup.sh               # Automated setup script
+└── verify-setup.sh        # Setup verification script
 ```
 
 ## Code Architecture
@@ -212,7 +223,7 @@ Enable debug mode for detailed logging:
 
 ## Security Considerations
 
-⚠️ **Important Security Notes:**
+ **Important Security Notes:**
 
 1. **Passphrase Storage**: This extension does NOT store your passphrases. You must enter them each time you use your private key.
 
@@ -303,4 +314,4 @@ This extension is provided as-is for educational and personal use.
 
 ---
 
-**Made with ❤️ for secure communications**
+**Made with for secure communications**
