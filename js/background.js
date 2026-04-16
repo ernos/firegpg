@@ -11,6 +11,17 @@
 console.log("[OpenPGP Background] Background script initializing");
 
 /**
+ * Browser action (toolbar icon) click handler
+ * Opens the sidebar when the toolbar icon is clicked
+ */
+browser.browserAction.onClicked.addListener(() => {
+  console.log("[OpenPGP Background] Toolbar icon clicked, opening sidebar");
+  browser.sidebarAction.open().catch((err) => {
+    console.error("[OpenPGP Background] Failed to open sidebar:", err);
+  });
+});
+
+/**
  * Extension installation/update handler
  */
 browser.runtime.onInstalled.addListener((details) => {
