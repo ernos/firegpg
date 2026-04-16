@@ -1,0 +1,29 @@
+
+# Development
+.history/
+*.log
+*.swp
+*.swo
+
+# Build artifacts
+*.xpi
+*.zip
+web-ext-artifacts/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+.tmp/
+
+# Editor files
+*.sublime-project
+*.sublime-workspace
+.idea/
+
+# Node modules (if you add any build tools)
+node_modules/
+package-lock.json
+dist/

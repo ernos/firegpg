@@ -1,0 +1,11 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "kill firefox",
+      "type": "shell",
+      "command": "killall -9 firefox | echo 1",
+      "problemMatcher": []
+    }
+  ]
+}

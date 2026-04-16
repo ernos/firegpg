@@ -1,0 +1,42 @@
+{
+  "version": "2.3.5",
+  "configurations": [
+    {
+      "name": "Launch OpenPGP",
+      "type": "firefox",
+      "request": "launch",
+      "reAttach": true,
+      "addonPath": "${workspaceFolder}",
+      "keepProfileChanges": false,
+      "reloadOnAttach": true,
+      "preLaunchTask": "kill firefox",
+      "firefoxArgs": [
+        "-P",
+        "extensiondev",
+        "--start-debugger-server",
+        "3000",
+        "--devenv",
+        "--newtab",
+        "about:debugging"
+      ],
+      "port": 3000,
+      "reloadOnChange": {
+        "watch": "${workspaceFolder}/**/*.js",
+        "ignore": "**/node_modules/**"
+      }
+    },
+    {
+      "name": "Attach OpenPGP",
+      "type": "firefox",
+      "request": "attach",
+      "clearConsoleOnReload": true,
+      "addonPath": "${workspaceFolder}",
+      "port": 3000,
+      "reloadOnAttach": true,
+      "reloadOnChange": {
+        "watch": "${workspaceFolder}/**/*.js",
+        "ignore": "**/node_modules/**"
+      }
+    }
+  ]
+}

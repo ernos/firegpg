@@ -1,0 +1,48 @@
+{
+  "version": "3.0",
+  "manifest_version": 2,
+  "name": "OpenPGP - Encrypt/Decrypt/Sign/Verify",
+  "description": "This is a fully complete implementation of the Public/Private key-pair encryption and decryption standard OpenPGP (Pretty Good Privacy). There still are some old school sites and markets that relies on manually copying the '----- PGP ENCRYPTED MESSAGE -----' into another program and then decrypt it from there. Believe it or not! This extension is focused on use cases like that, where you can have everything super accessible and realiable all in the browser, instead of, (like some Windows users) using very outdated software that doesn't hold up to todays standard. (GPG4USB, I'm looking at you!) Since PGP doesn't really come natively in Windows systems like it does in other operating systems (gnupg) I wanted to create something super simple, very safe, and adhering to todays standards.",
+  "permissions": [
+    "storage"
+  ],
+  "browser_action": {
+    "default_icon": {
+      "128": "icon/icon-128.png",
+      "64": "icon/icon-64.png",
+      "48": "icon/icon-48.png",
+      "32": "icon/icon-32.png",
+      "16": "icon/icon-16.png"
+    },
+    "default_title": "OpenPGP"
+  },
+  "web_accessible_resources": [
+    "lib/openpgp.min.js"
+  ],
+  "background": {
+    "scripts": [
+      "js/background.js"
+    ]
+  },
+  "sidebar_action": {
+    "default_panel": "index.html",
+    "default_icon": "icon/icon-128.png"
+  },
+  "icons": {
+    "128": "icon/icon-128.png",
+    "64": "icon/icon-64.png",
+    "48": "icon/icon-48.png",
+    "32": "icon/icon-32.png",
+    "16": "icon/icon-16.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    },
+    "id": "@OpenPGP"
+  }
+}
