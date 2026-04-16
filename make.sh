@@ -129,3 +129,4 @@ fi
 #rm $manitemp
 cp "$itemplate" "$index"
 cp $manitemplate $manifest
+rm $manitemp
