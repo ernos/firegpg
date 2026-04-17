@@ -209,6 +209,103 @@ details:not([open]) .card-summary::after {
   padding-top: var(--spacing-md);
 }
 
+/* ===== Modal Dialog ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-dialog {
+  background-color: var(--bg-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  min-width: 400px;
+  max-width: 90%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.modal-dialog h3 {
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--primary-color);
+  font-size: 18px;
+}
+
+.modal-dialog p {
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.modal-dialog input[type="password"] {
+  width: 100%;
+  padding: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+  margin-top: var(--spacing-md);
+}
+
+/* ===== First-Time Setup Banner ===== */
+.first-time-banner {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 87, 34, 0.15) 100%);
+  border: 2px solid #ff6f00;
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.first-time-banner-content {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  align-items: flex-start;
+}
+
+.first-time-banner-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.first-time-banner-text {
+  flex: 1;
+}
+
+.first-time-banner-text strong {
+  display: block;
+  font-size: 16px;
+  color: #d84315;
+  margin-bottom: var(--spacing-xs);
+}
+
+.first-time-banner-text p {
+  color: var(--text-color);
+  font-size: 13px;
+  margin: 0;
+}
+
+.first-time-banner-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 /* ===== Lock Banner ===== */
 .lock-banner {
   background-color: rgba(255, 193, 7, 0.1);

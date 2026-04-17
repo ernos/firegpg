@@ -10,6 +10,35 @@
 
 <body>
   <div class="container">
+    <!-- Password Modal Dialog -->
+    <div id="passwordModal" class="modal-overlay hidden">
+      <div class="modal-dialog">
+        <h3 id="passwordModalTitle">Enter Password</h3>
+        <p id="passwordModalMessage"></p>
+        <input type="password" id="passwordModalInput" placeholder="Password" />
+        <div id="passwordModalStatus" class="status"></div>
+        <div class="modal-actions">
+          <button id="passwordModalOk" class="btn btn-primary">OK</button>
+          <button id="passwordModalCancel" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- First-Time Setup Banner -->
+    <div id="firstTimeSetupBanner" class="first-time-banner hidden">
+      <div class="first-time-banner-content">
+        <div class="first-time-banner-icon">⚠️</div>
+        <div class="first-time-banner-text">
+          <strong>It is highly recommended to set a master password!</strong>
+          <p>If you do not set a master password, your private keys are stored unencrypted in the browser's local storage.</p>
+        </div>
+      </div>
+      <div class="first-time-banner-actions">
+        <button id="firstTimeSetupYesBtn" class="btn btn-primary">Set Master Password Now</button>
+        <button id="firstTimeSetupNoBtn" class="btn btn-secondary">Skip for Now</button>
+      </div>
+    </div>
+
     <!-- Header Section -->
     <header>
       <!--<h1>🔐 OpenPGP</h1>-->
@@ -122,9 +151,9 @@
           <div id="exportPrivateStatus" class="status"></div>
         </div>
 
-        <!-- Storage Protection -->
+        <!-- Master Password Protection -->
         <div class="master-pwd-section">
-          <label>🔒 Storage Protection</label>
+          <label>🔒 Master Password Protection</label>
           <div id="masterPasswordSection"></div>
         </div>
       </section>

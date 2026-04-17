@@ -8,6 +8,66 @@
 console.log("[OpenPGP UI] Initializing UI controller");
 
 /**
+ * Display a password prompt modal dialog
+ *
+ * @param {string} title - The title of the modal
+ * @param {string} message - The message/prompt text
+ * @returns {Promise<string|null>} The password entered, or null if cancelled
+ */
+function passwordPrompt(title, message = "") {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("passwordModal");
+    const input = document.getElementById("passwordModalInput");
+    const titleEl = document.getElementById("passwordModalTitle");
+    const messageEl = document.getElementById("passwordModalMessage");
+    const statusEl = document.getElementById("passwordModalStatus");
+    const okBtn = document.getElementById("passwordModalOk");
+    const cancelBtn = document.getElementById("passwordModalCancel");
+
+    // Set content
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    input.value = "";
+    statusEl.textContent = "";
+    statusEl.style.display = "none";
+
+    // Show modal
+    modal.classList.remove("hidden");
+    input.focus();
+
+    const cleanup = () => {
+      modal.classList.add("hidden");
+      okBtn.removeEventListener("click", handleOk);
+      cancelBtn.removeEventListener("click", handleCancel);
+      input.removeEventListener("keypress", handleKeypress);
+    };
+
+    const handleOk = () => {
+      const value = input.value;
+      cleanup();
+      resolve(value);
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    const handleKeypress = (e) => {
+      if (e.key === "Enter") {
+        handleOk();
+      } else if (e.key === "Escape") {
+        handleCancel();
+      }
+    };
+
+    okBtn.addEventListener("click", handleOk);
+    cancelBtn.addEventListener("click", handleCancel);
+    input.addEventListener("keypress", handleKeypress);
+  });
+}
+
+/**
  * Display a status message to the user
  *
  * @param {HTMLElement} element - The element to display status in
@@ -169,11 +229,103 @@ class KeyManagement {
     // Set up copy buttons
     this.setupCopyButtons();
 
+    // Check and show first-time setup banner
+    this.checkFirstTimeSetup();
+
     // Initialize master password UI
     this.initMasterPassword();
 
     // Load keys on startup
     this.refreshKeys();
+  }
+
+  async checkFirstTimeSetup() {
+    const result = await browser.storage.local.get(
+      "hasSeenMasterPasswordSetup",
+    );
+    const hasSeenSetup = result.hasSeenMasterPasswordSetup || false;
+    const hasMasterPassword = await pgpHandler.isMasterPasswordRequired();
+
+    // Only show first-time banner if user hasn't seen it AND hasn't set a master password
+    if (!hasSeenSetup && !hasMasterPassword) {
+      const banner = document.getElementById("firstTimeSetupBanner");
+      setVisible(banner, true);
+
+      // Set up event handlers
+      document
+        .getElementById("firstTimeSetupYesBtn")
+        .addEventListener("click", () => {
+          this.handleFirstTimePasswordSetup();
+        });
+
+      document
+        .getElementById("firstTimeSetupNoBtn")
+        .addEventListener("click", () => {
+          this.dismissFirstTimeSetup();
+        });
+    }
+  }
+
+  async handleFirstTimePasswordSetup() {
+    // Get password from user
+    const password = await passwordPrompt(
+      "Set Master Password",
+      "Enter your master password (minimum 8 characters)",
+    );
+
+    if (!password) {
+      return; // User cancelled
+    }
+
+    if (password.length < 8) {
+      alert("Password must be at least 8 characters long.");
+      return;
+    }
+
+    // Confirm password
+    const confirmPassword = await passwordPrompt(
+      "Confirm Master Password",
+      "Re-enter your master password to confirm",
+    );
+
+    if (!confirmPassword) {
+      return; // User cancelled
+    }
+
+    if (password !== confirmPassword) {
+      alert("Passwords do not match. Please try again.");
+      return;
+    }
+
+    // Set the master password
+    try {
+      await pgpHandler.enableMasterPassword(password);
+      alert(
+        "Master password has been set successfully! Your private keys will now be encrypted.",
+      );
+
+      // Mark as seen and hide banner
+      await browser.storage.local.set({ hasSeenMasterPasswordSetup: true });
+      const banner = document.getElementById("firstTimeSetupBanner");
+      setVisible(banner, false);
+
+      // Refresh the master password section
+      this.renderMasterPasswordSection(true, true);
+    } catch (err) {
+      alert(`Error setting master password: ${err.message}`);
+    }
+  }
+
+  async dismissFirstTimeSetup() {
+    if (
+      confirm(
+        "Are you sure? Your private keys will be stored unencrypted. You can still set a master password later in the Keys tab.",
+      )
+    ) {
+      await browser.storage.local.set({ hasSeenMasterPasswordSetup: true });
+      const banner = document.getElementById("firstTimeSetupBanner");
+      setVisible(banner, false);
+    }
   }
 
   async initMasterPassword() {
@@ -215,11 +367,16 @@ class KeyManagement {
           <div class="form-group">
             <input type="password" id="newMasterPwdInput" placeholder="New master password" style="margin-bottom:6px">
             <button id="changeMasterPwdBtn" class="btn btn-secondary btn-small">Change Password</button>
-            <button id="disableMasterPwdBtn" class="btn btn-danger btn-small" style="margin-left:6px">Disable</button>
+            <button id="disableMasterPwdBtn" class="btn btn-danger btn-small" style="margin-left:6px">Disable Master Password</button>
+            <button id="disableMasterPwdAndDeleteKeysBtn" class="btn btn-danger btn-small" style="margin-left:6px;margin-top:6px">Delete All Private Keys AND Disable Master Password</button>
             <div id="masterPwdSetStatus" class="status"></div>
           </div>
         `
-            : `<p style="font-size:12px;color:var(--text-muted)">Unlock above to change or disable.</p>`
+            : `
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Unlock above to change or disable.</p>
+          <button id="disableMasterPwdAndDeleteKeysBtn" class="btn btn-danger btn-small">Forgot Password? Delete All Keys</button>
+          <div id="masterPwdSetStatus" class="status"></div>
+        `
         }
       `;
       if (isUnlocked) {
@@ -229,6 +386,18 @@ class KeyManagement {
         document
           .getElementById("disableMasterPwdBtn")
           .addEventListener("click", () => this.disableMasterPassword());
+        document
+          .getElementById("disableMasterPwdAndDeleteKeysBtn")
+          .addEventListener("click", () =>
+            this.disableMasterPwdAndDeleteKeysBtn(),
+          );
+      } else {
+        // Even when locked, allow deleting keys if password is forgotten
+        document
+          .getElementById("disableMasterPwdAndDeleteKeysBtn")
+          .addEventListener("click", () =>
+            this.disableMasterPwdAndDeleteKeysBtn(),
+          );
       }
     } else {
       section.innerHTML = `
@@ -330,6 +499,41 @@ class KeyManagement {
     }
   }
 
+  async disableMasterPwdAndDeleteKeysBtn() {
+    const statusEl = document.getElementById("masterPwdSetStatus");
+
+    if (
+      !confirm(
+        "This will delete all of your private keys AND remove master password protection. Use this only if you forgot your master password! Private keys will be lost forever! Continue?",
+      )
+    ) {
+      return;
+    }
+
+    showStatus(statusEl, "Deleting keys and removing protection...", "info");
+
+    try {
+      // Delete the storage variables
+      await browser.storage.local.remove([
+        "MiniPGP_keys",
+        "MiniPGP_master_verify",
+      ]);
+
+      showStatus(
+        statusEl,
+        "All keys deleted and master password removed",
+        "success",
+      );
+
+      // Refresh the UI
+      setTimeout(() => {
+        this.renderMasterPasswordSection(false, false);
+        this.refreshKeys();
+      }, 1500);
+    } catch (err) {
+      showStatus(statusEl, `Error: ${err.message}`, "error");
+    }
+  }
   /**
    * Set up click handlers for all copy buttons
    */
