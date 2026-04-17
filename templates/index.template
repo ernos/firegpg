@@ -79,9 +79,11 @@
       <div class="cards-grid">
 
         <!-- Your Keys Section (shown first) -->
-        <section class="card card-generate">
+        <section class="card card-details">
           <details id="yourKeysSectionCollapse" open>
-            <h3>Your Keys</h3>
+            <summary class="card-summary">
+              <h3>Your Keys - Detauls</h3>
+            </summary>
             <div id="keysList" class="keys-list">
               <p class="text-muted">No keys found. Generate a key pair to get started.</p>
             </div>
