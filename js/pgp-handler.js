@@ -49,6 +49,7 @@ class PGPHandler {
   constructor() {
     debugLog("PGPHandler initialized");
     this.STORAGE_KEY = "MiniPGP_keys";
+    this.PUBLIC_KEYS_STORAGE_KEY = "MiniPGP_public_keys";
     this.MASTER_VERIFY_KEY = "MiniPGP_master_verify";
     this._masterPassword = null;
   }
@@ -482,6 +483,169 @@ class PGPHandler {
   }
 
   /**
+   * Import a public key
+   *
+   * @param {string} armoredKey - ASCII-armored public key
+   * @returns {Promise<Object>} Import result
+   */
+  async importPublicKey(armoredKey) {
+    debugLog("Importing public key");
+
+    try {
+      // Read and validate the public key
+      const publicKey = await openpgp.readKey({ armoredKey });
+
+      debugLog("Public key read successfully");
+
+      // Get key information
+      const fingerprint = publicKey.getFingerprint();
+      const keyID = publicKey.getKeyID().toHex();
+      const users = publicKey.users.map((u) => u.userID.userID);
+
+      debugLog("Public key info", { fingerprint, keyID, users });
+
+      // Extract name and email from first user ID
+      const userIDMatch = users[0]?.match(/^(.+?)\s*<(.+?)>$/);
+      const name = userIDMatch ? userIDMatch[1] : "Imported Public Key";
+      const email = userIDMatch ? userIDMatch[2] : "";
+
+      // Store the public key
+      const keyData = {
+        name,
+        email,
+        publicKey: armoredKey,
+        fingerprint,
+        keyID,
+        created: new Date().toISOString(),
+        imported: true,
+      };
+
+      await this.storePublicKey(keyData);
+
+      debugLog("Public key imported and stored");
+
+      return {
+        success: true,
+        fingerprint,
+        keyID,
+        name,
+        email,
+      };
+    } catch (error) {
+      errorLog("Public key import failed", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Store a public key in browser storage
+   *
+   * @param {Object} keyData - Public key data to store
+   */
+  async storePublicKey(keyData) {
+    debugLog("Storing public key", { fingerprint: keyData.fingerprint });
+
+    try {
+      // Get existing public keys from storage
+      const stored = await browser.storage.local.get(
+        this.PUBLIC_KEYS_STORAGE_KEY,
+      );
+      const keys = stored[this.PUBLIC_KEYS_STORAGE_KEY] || [];
+
+      // Check if key already exists (by fingerprint)
+      const existingIndex = keys.findIndex(
+        (k) => k.fingerprint === keyData.fingerprint,
+      );
+
+      if (existingIndex >= 0) {
+        debugLog("Updating existing public key");
+        keys[existingIndex] = keyData;
+      } else {
+        debugLog("Adding new public key");
+        keys.push(keyData);
+      }
+
+      // Save back to storage
+      await browser.storage.local.set({ [this.PUBLIC_KEYS_STORAGE_KEY]: keys });
+
+      debugLog("Public key storage successful", { totalKeys: keys.length });
+    } catch (error) {
+      errorLog("Failed to store public key", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Retrieve all stored public keys
+   *
+   * @returns {Promise<Array>} Array of stored public keys
+   */
+  async getAllPublicKeys() {
+    debugLog("Retrieving all public keys");
+
+    try {
+      const stored = await browser.storage.local.get(
+        this.PUBLIC_KEYS_STORAGE_KEY,
+      );
+      const keys = stored[this.PUBLIC_KEYS_STORAGE_KEY] || [];
+
+      debugLog("Public keys retrieved", { count: keys.length });
+
+      return keys;
+    } catch (error) {
+      errorLog("Failed to retrieve public keys", error);
+      return [];
+    }
+  }
+
+  /**
+   * Get a specific public key by fingerprint
+   *
+   * @param {string} fingerprint - Key fingerprint
+   * @returns {Promise<Object|null>} Key data or null if not found
+   */
+  async getPublicKeyByFingerprint(fingerprint) {
+    debugLog("Getting public key by fingerprint", fingerprint);
+
+    const keys = await this.getAllPublicKeys();
+    const key = keys.find((k) => k.fingerprint === fingerprint);
+
+    if (key) {
+      debugLog("Public key found");
+    } else {
+      debugLog("Public key not found");
+    }
+
+    return key || null;
+  }
+
+  /**
+   * Delete a public key by fingerprint
+   *
+   * @param {string} fingerprint - Key fingerprint
+   */
+  async deletePublicKey(fingerprint) {
+    debugLog("Deleting public key", fingerprint);
+
+    try {
+      const keys = await this.getAllPublicKeys();
+      const filteredKeys = keys.filter((k) => k.fingerprint !== fingerprint);
+
+      await browser.storage.local.set({
+        [this.PUBLIC_KEYS_STORAGE_KEY]: filteredKeys,
+      });
+
+      debugLog("Public key deleted", { remaining: filteredKeys.length });
+    } catch (error) {
+      errorLog("Failed to delete public key", error);
+      throw error;
+    }
+  }
+
+  /**
    * Encrypt a message
    *
    * @param {Object} options - Encryption options
@@ -675,42 +839,118 @@ class PGPHandler {
           signatures = [];
         }
       } else {
-        // Regular encrypted message (may have embedded signature)
+        // Regular message (may be encrypted, signed, or both)
         const message = await openpgp.readMessage({
           armoredMessage: encrypted,
         });
-        debugLog("Encrypted message parsed");
+        debugLog("Message parsed");
 
-        const decryptOptions = {
-          message,
-          decryptionKeys: decryptedPrivateKey,
-        };
+        // Check if the message is actually encrypted by looking for encrypted packets
+        const isEncrypted = message.packets.some(
+          (packet) =>
+            packet.constructor.tag === 1 || // Public-Key Encrypted Session Key Packet
+            packet.constructor.tag === 3 || // Symmetric-Key Encrypted Session Key Packet
+            packet.constructor.tag === 18, // Symmetrically Encrypted Integrity Protected Data Packet
+        );
 
-        if (verifyWithKey) {
-          debugLog("Adding verification key");
-          const verificationKey = await openpgp.readKey({
-            armoredKey: verifyWithKey,
+        debugLog("Message analysis", { isEncrypted });
+
+        if (isEncrypted) {
+          // Message is encrypted - decrypt it
+          const decryptOptions = {
+            message,
+            decryptionKeys: decryptedPrivateKey,
+          };
+
+          if (verifyWithKey) {
+            debugLog("Adding verification key");
+            const verificationKey = await openpgp.readKey({
+              armoredKey: verifyWithKey,
+            });
+            decryptOptions.verificationKeys = verificationKey;
+          }
+
+          debugLog("Starting decryption");
+          const result = await openpgp.decrypt(decryptOptions);
+          decrypted = result.data;
+          signatures = result.signatures;
+          debugLog("Decryption successful", {
+            decryptedLength: decrypted.length,
+            hasSignatures: signatures && signatures.length > 0,
           });
-          decryptOptions.verificationKeys = verificationKey;
-        }
+        } else {
+          // Message is only signed (not encrypted) - just verify signature
+          debugLog("Message is signed but not encrypted");
 
-        debugLog("Starting decryption");
-        const result = await openpgp.decrypt(decryptOptions);
-        decrypted = result.data;
-        signatures = result.signatures;
-        debugLog("Decryption successful", {
-          decryptedLength: decrypted.length,
-          hasSignatures: signatures && signatures.length > 0,
-        });
+          if (verifyWithKey) {
+            const verificationKey = await openpgp.readKey({
+              armoredKey: verifyWithKey,
+            });
+            const verifyResult = await openpgp.verify({
+              message,
+              verificationKeys: verificationKey,
+            });
+
+            // Extract the literal data from the signed message
+            const literalPacket = message.packets.findPacket(11); // Literal Data Packet
+            if (literalPacket) {
+              decrypted = literalPacket.getText();
+            } else {
+              throw new Error(
+                "Cannot extract message content from signed message",
+              );
+            }
+
+            signatures = verifyResult.signatures;
+            debugLog("Signature verification completed");
+          } else {
+            // No verification key provided
+            const literalPacket = message.packets.findPacket(11);
+            if (literalPacket) {
+              decrypted = literalPacket.getText();
+            } else {
+              throw new Error(
+                "Cannot extract message content from signed message",
+              );
+            }
+
+            // Check for signature packets
+            const signaturePackets = message.packets.filter(
+              (p) => p.constructor.tag === 2,
+            );
+            if (signaturePackets.length > 0) {
+              // Create a pseudo-signature object for reporting
+              const sigPacket = signaturePackets[0];
+              const keyID = sigPacket.issuerKeyID
+                ? sigPacket.issuerKeyID.toHex()
+                : "unknown";
+              signatures = [
+                {
+                  keyID: { toHex: () => keyID },
+                  verified: Promise.reject(
+                    new Error("No verification key provided"),
+                  ),
+                },
+              ];
+            } else {
+              signatures = [];
+            }
+            debugLog("Signed message extracted without verification");
+          }
+        }
       }
 
-      // Verify any embedded signatures (from encrypted+signed messages)
+      // Verify any embedded signatures (from encrypted+signed or signed-only messages)
       let signatureInfo = outerSignatureInfo;
       if (!signatureInfo && signatures && signatures.length > 0) {
         debugLog("Embedded signatures detected, attempting verification");
         try {
           const sig = signatures[0];
-          const keyID = sig.keyID.toHex();
+          const keyID = sig.keyID
+            ? sig.keyID.toHex()
+            : typeof sig.keyID === "object" && sig.keyID.toHex
+              ? sig.keyID.toHex()
+              : "unknown";
           if (verifyWithKey) {
             await sig.verified;
             debugLog("Embedded signature verified successfully");
@@ -723,8 +963,18 @@ class PGPHandler {
             };
           }
         } catch (error) {
-          debugLog("Embedded signature verification failed", error);
-          signatureInfo = { valid: false, error: error.message };
+          debugLog("Signature verification failed", error);
+          const sig = signatures[0];
+          const keyID = sig.keyID
+            ? sig.keyID.toHex()
+            : typeof sig.keyID === "object" && sig.keyID.toHex
+              ? sig.keyID.toHex()
+              : "unknown";
+          signatureInfo = {
+            valid: false,
+            keyID,
+            error: error.message,
+          };
         }
       }
 

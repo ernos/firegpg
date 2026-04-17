@@ -10,12 +10,19 @@ A comprehensive Firefox extension for PGP/PGP encryption, decryption, signing, a
 - Decrypt messages with private keys
 - Sign messages (cleartext and detached)
 - Verify signatures
-- Import/Export keys
+- Import/Export keys (both private and public)
+- Auto-detect key type during import
+- Separate storage for imported public keys
+- Handle encrypted, signed, and encrypted+signed messages
 - Auto-detect PGP content on web pages
 
  **User-Friendly Interface**
 - Clean sidebar interface
 - Tab-based navigation
+- Public key dropdown selectors for easy encryption
+- Signature verification dropdown in decrypt tab
+- Toggle between dropdown and manual key entry
+- Dedicated section for imported public keys
 - Copy-to-clipboard functionality
 - Context menu integration
 - Real-time status feedback
@@ -91,14 +98,41 @@ You can use any PNG images (19x19, 38x38, and 64x64 pixels) or create simple pla
 4. Click "Generate Key Pair"
 5. Wait about 30-60 seconds for key generation to complete
 
+### Importing Keys
+
+The extension automatically detects whether you're importing a private key or a public key:
+
+**To Import a Private Key:**
+1. Go to the "Keys" tab
+2. Scroll to "Import/Export" section
+3. Paste your private key
+4. Enter the passphrase
+5. Click "Import Key"
+
+**To Import a Public Key:**
+1. Go to the "Keys" tab
+2. Scroll to "Import/Export" section
+3. Paste the public key
+4. Leave passphrase field empty (not needed for public keys)
+5. Click "Import Key"
+6. The public key will appear in "Imported Public Keys" section
+
 ### Encrypting a Message
 
+**Using Imported Public Keys (Recommended):**
 1. Go to the "Encrypt" tab
-2. Paste the recipient's public key
+2. Select recipient from the "Recipient's Public Key" dropdown
 3. Type your message
 4. Optionally check "Sign message with my key"
 5. Click "Encrypt Message"
 6. Copy the encrypted output
+
+**Using Manual Key Entry:**
+1. Go to the "Encrypt" tab
+2. Check "Use manual key entry instead"
+3. Paste the recipient's public key in the textarea
+4. Type your message
+5. Click "Encrypt Message"
 
 ### Decrypting a Message
 
@@ -106,7 +140,13 @@ You can use any PNG images (19x19, 38x38, and 64x64 pixels) or create simple pla
 2. Paste the encrypted message
 3. Select your private key
 4. Enter your passphrase
-5. Click "Decrypt Message"
+5. (Optional) Select sender's public key from dropdown for signature verification
+6. Click "Decrypt Message"
+
+**Note:** The extension now properly handles:
+- Encrypted messages
+- Signed-only messages
+- Encrypted + signed messages
 
 ### Signing a Message
 
@@ -197,6 +237,7 @@ Keys are stored in Firefox's local storage API (`browser.storage.local`):
 
 ```javascript
 {
+  // User's own private/public key pairs
   MiniPGP_keys: [
     {
       name: "User Name",
@@ -208,6 +249,20 @@ Keys are stored in Firefox's local storage API (`browser.storage.local`):
       created: "2024-01-01T00:00:00.000Z"
     }
   ],
+  
+  // Imported public keys (encryption recipients)
+  MiniPGP_public_keys: [
+    {
+      name: "Recipient Name",
+      email: "recipient@example.com",
+      publicKey: "-----BEGIN PGP PUBLIC KEY BLOCK-----...",
+      fingerprint: "EFGH5678...",
+      keyID: "5678EFGH",
+      created: "2024-01-01T00:00:00.000Z",
+      imported: true
+    }
+  ],
+  
   debugMode: false
 }
 ```
@@ -273,7 +328,14 @@ Enable debug mode for detailed logging:
 ### Can't decrypt messages
 - Verify you have the correct private key
 - Check passphrase is correct
-- Ensure message was encrypted for you public key
+- Ensure message was encrypted for your public key
+- For signed-only messages, they will be processed even without encryption
+- If message is only signed (not encrypted), you don't need to provide a private key
+
+### Public key dropdown is empty
+- Ensure you have imported at least one public key
+- Go to Keys tab and import a public key
+- Check the "Imported Public Keys" section to verify keys are stored
 
 ### Auto-detection not working
 - Check debug logs
@@ -282,16 +344,26 @@ Enable debug mode for detailed logging:
 
 ## Contributing
 
-This is an MVP (Minimum Viable Product). Potential improvements:
+Potential improvements:
 
 - [ ] Support for ECC keys
 - [ ] Key server integration
-- [ ] Multiple key selection for encryption
 - [ ] Bulk operations
 - [ ] Settings/preferences page
 - [ ] Key expiration handling
 - [ ] Subkey management
 - [ ] Web Crypto API integration for better performance
+- [ ] Search/filter functionality for imported public keys
+- [ ] Key nicknames or labels for easier identification
+- [ ] Export all keys at once
+- [ ] QR code generation for public keys
+
+**Recently Completed:**
+- [x] Separate storage for imported public keys
+- [x] Auto-detect key type during import
+- [x] Public key dropdown selectors
+- [x] Handle signed-only messages (not just encrypted)
+- [x] Toggle between dropdown and manual key entry
 
 ## License
 
@@ -304,7 +376,27 @@ This extension is provided as-is for educational and personal use.
 
 ## Version History
 
-### v1.3.4 (Current)
+### v3.7 (Current)
+**Public Key Management & Message Type Handling**
+- ✨ Separate storage and display for imported public keys
+- ✨ Auto-detect key type during import (private vs public)
+- ✨ Public key dropdown selectors in Encrypt tab
+- ✨ Public key dropdown selectors in Decrypt tab for signature verification
+- ✨ Toggle between dropdown and manual key entry
+- ✨ Dedicated "Imported Public Keys" section with export/delete actions
+- 🐛 Fixed decrypt function to properly handle signed-only messages
+- 🐛 Fixed "Session key decryption failed" error for non-encrypted messages
+- 🔧 Improved message type detection (encrypted, signed, encrypted+signed)
+- 🔧 Enhanced signature verification for all message types
+
+### v3.6
+- Previous stable release
+- Basic key management
+- Encryption, decryption, signing, verification
+- Master password protection
+- Key backup/restore functionality
+
+### v1.3.4
 - Initial MVP release
 - Key generation, encryption, decryption
 - Signing and verification

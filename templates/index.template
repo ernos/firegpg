@@ -59,6 +59,7 @@
       <button class="tab-button" data-tab="decrypt">Decrypt</button>
       <button class="tab-button" data-tab="sign">Sign</button>
       <button class="tab-button" data-tab="verify">Verify</button>
+      <button class="tab-button" data-tab="settings">Settings</button>
     </nav>
 
     <!-- Keys Tab -->
@@ -82,10 +83,23 @@
         <section class="card card-details">
           <details id="yourKeysSectionCollapse" open>
             <summary class="card-summary">
-              <h3>Your Keys - Detauls</h3>
+              <h3>Your Keys - Defaults</h3>
             </summary>
             <div id="keysList" class="keys-list">
               <p class="text-muted">No keys found. Generate a key pair to get started.</p>
+            </div>
+            <button id="refreshKeysBtn" class="btn btn-secondary">Refresh Keys</button>
+          </details>
+        </section>
+
+        <!-- Imported Public Keys -->
+        <section class="card card-details">
+          <details id="myImportedPublicKeys" open>
+            <summary class="card-summary">
+              <h3>Imported Public Keys</h3>
+            </summary>
+            <div id="publickeysList" class="keys-list">
+              <p class="text-muted">No imported public keys found. Import a few first.</p>
             </div>
             <button id="refreshKeysBtn" class="btn btn-secondary">Refresh Keys</button>
           </details>
@@ -121,15 +135,15 @@
       <section class="card">
         <h3>Import/Export</h3>
         <div class="form-group">
-          <label for="importKey">Import Private Key:</label>
+          <label for="importKey">Import Private or Public Key:</label>
           <div class="textarea-with-copy">
-            <textarea id="importKey" rows="4" placeholder="Paste your private key here"></textarea>
+            <textarea id="importKey" rows="4" placeholder="Paste your private or public key here"></textarea>
             <button class="copy-btn" data-target="importKey" title="Copy to clipboard">📋</button>
           </div>
         </div>
         <div class="form-group">
-          <label for="importPassphrase">Passphrase:</label>
-          <input type="password" id="importPassphrase" placeholder="Key passphrase">
+          <label for="importPassphrase">Passphrase (only for private keys):</label>
+          <input type="password" id="importPassphrase" placeholder="Key passphrase (leave empty for public keys)">
         </div>
         <button id="importKeyBtn" class="btn btn-secondary">Import Key</button>
         <div id="importStatus" class="status"></div>
@@ -153,11 +167,6 @@
           <div id="exportPrivateStatus" class="status"></div>
         </div>
 
-        <!-- Master Password Protection -->
-        <div class="master-pwd-section">
-          <label>🔒 Master Password Protection</label>
-          <div id="masterPasswordSection"></div>
-        </div>
       </section>
     </div>
 
@@ -167,7 +176,19 @@
 
       <section class="card">
         <div class="form-group">
-          <label for="encryptRecipient">Recipient's Public Key:</label>
+          <label for="encryptRecipientSelect">Recipient's Public Key:</label>
+          <select id="encryptRecipientSelect">
+            <option value="">-- Select an imported public key --</option>
+          </select>
+          <div style="margin-top: 8px;">
+            <label>
+              <input type="checkbox" id="encryptManualKeyToggle">
+              Use manual key entry instead
+            </label>
+          </div>
+        </div>
+        <div class="form-group hidden" id="encryptRecipientManual">
+          <label for="encryptRecipient">Or paste recipient's public key:</label>
           <textarea id="encryptRecipient" rows="4" placeholder="Paste recipient's public key here"></textarea>
         </div>
         <div class="form-group">
@@ -221,8 +242,21 @@
           <label for="decryptPassphrase">Your Passphrase:</label>
           <input type="password" id="decryptPassphrase" placeholder="Your key passphrase">
         </div>
-        <div class="form-group">
-          <label for="decryptVerifyKey">Sender's Public Key (optional, for signature verification):</label>
+
+        <div class="form-group" style="display:none;">
+          <label for="decryptVerifyKeySelect">Sender's Public Key (optional, for signature verification):</label>
+          <select id="decryptVerifyKeySelect">
+            <option value="">-- Select an imported public key (optional) --</option>
+          </select>
+          <div style="margin-top: 8px;">
+            <label>
+              <input type="checkbox" id="decryptManualKeyToggle">
+              Use manual key entry instead
+            </label>
+          </div>
+        </div>
+        <div class="form-group hidden" id="decryptVerifyKeyManual"  style="display:none;">
+          <label for="decryptVerifyKey">Or paste sender's public key:</label>
           <textarea id="decryptVerifyKey" rows="3"
             placeholder="Paste sender's public key to verify signature (optional)"></textarea>
         </div>
@@ -299,6 +333,33 @@
           <div id="verifyResult" class="verify-result"></div>
           <div id="verifyMessageText"></div>
         </div>
+      </section>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="settings-tab">
+      <h2>Settings</h2>
+
+      <!-- Master Password Protection -->
+      <section class="card">
+        <h3>🔒 Master Password Protection</h3>
+        <div id="masterPasswordSection"></div>
+      </section>
+
+      <!-- Backup Keys -->
+      <section class="card">
+        <h3>🗄️ Backup Keys</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+          Export a backup of your keys to a file. If a master password is set, both keys and the master password
+          verification data will be saved in an encrypted backup file. Import a previously exported backup to restore
+          your keys.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button id="exportBackupBtn" class="btn btn-secondary">Export Backup Keys</button>
+          <button id="importBackupBtn" class="btn btn-secondary">Import Backup Keys</button>
+        </div>
+        <input type="file" id="importBackupFile" accept=".json" style="display:none">
+        <div id="backupStatus" class="status"></div>
       </section>
     </div>
 

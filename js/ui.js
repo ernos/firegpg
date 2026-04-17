@@ -200,6 +200,7 @@ class KeyManagement {
     this.refreshBtn = document.getElementById("refreshKeysBtn");
     this.importBtn = document.getElementById("importKeyBtn");
     this.keysList = document.getElementById("keysList");
+    this.publickeysList = document.getElementById("publickeysList");
 
     // Set up event listeners
     this.generateBtn.addEventListener("click", () => this.generateKey());
@@ -237,6 +238,7 @@ class KeyManagement {
 
     // Load keys on startup
     this.refreshKeys();
+    this.refreshPublicKeys();
   }
 
   async checkFirstTimeSetup() {
@@ -776,6 +778,139 @@ class KeyManagement {
     }
   }
 
+  /**
+   * Refresh and display imported public keys
+   */
+  async refreshPublicKeys() {
+    console.log("[OpenPGP UI] Refreshing public keys list");
+
+    try {
+      const publicKeys = await pgpHandler.getAllPublicKeys();
+
+      console.log("[OpenPGP UI] Found", publicKeys.length, "public keys");
+
+      if (publicKeys.length === 0) {
+        this.publickeysList.innerHTML =
+          '<p class="text-muted">No imported public keys found. Import a few first.</p>';
+      } else {
+        // Build public keys display
+        let html = "";
+
+        publicKeys.forEach((key) => {
+          html += `
+      <div class="key-item" data-fingerprint="${key.fingerprint}">
+          <div class="key-info">
+              <strong>${this.escapeHtml(key.name)}</strong> &lt;${this.escapeHtml(key.email)}&gt;
+              <br>
+              <small>Fingerprint: <code>${key.fingerprint}</code></small>
+              <br>
+              <small>Imported: ${new Date(key.created).toLocaleString()}</small>
+          </div>
+          <div class="key-actions">
+              <button class="btn btn-small btn-secondary export-public-key" data-fingerprint="${key.fingerprint}">
+                  Export
+              </button>
+              <button class="btn btn-small btn-danger delete-public-key" data-fingerprint="${key.fingerprint}">
+                  Delete
+              </button>
+          </div>
+      </div>
+    `;
+        });
+
+        this.publickeysList.innerHTML = html;
+
+        // Register click listeners for the individual public keys
+        this.publickeysList
+          .querySelectorAll(".export-public-key")
+          .forEach((btn) => {
+            btn.addEventListener("click", (e) =>
+              this.exportStoredPublicKey(e.target.dataset.fingerprint),
+            );
+          });
+        this.publickeysList
+          .querySelectorAll(".delete-public-key")
+          .forEach((btn) => {
+            btn.addEventListener("click", (e) =>
+              this.deletePublicKey(e.target.dataset.fingerprint),
+            );
+          });
+      }
+
+      // Also refresh the encrypt and decrypt tab dropdowns
+      this.updateEncryptPublicKeysDropdown();
+      this.updateDecryptPublicKeysDropdown();
+    } catch (error) {
+      console.error("[OpenPGP UI] Error refreshing public keys:", error);
+      this.publickeysList.innerHTML =
+        '<p class="text-muted text-error">Error loading public keys</p>';
+    }
+  }
+
+  /**
+   * Update the encrypt tab public keys dropdown
+   */
+  async updateEncryptPublicKeysDropdown() {
+    console.log("[OpenPGP UI] Updating encrypt tab public keys dropdown");
+
+    try {
+      const publicKeys = await pgpHandler.getAllPublicKeys();
+      const dropdown = document.getElementById("encryptRecipientSelect");
+
+      // Clear existing options except the first one
+      dropdown.innerHTML =
+        '<option value="">-- Select an imported public key --</option>';
+
+      // Add options for each public key
+      publicKeys.forEach((key) => {
+        const option = document.createElement("option");
+        option.value = key.fingerprint;
+        option.textContent = `${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
+        dropdown.appendChild(option);
+      });
+
+      console.log(
+        "[OpenPGP UI] Dropdown updated with",
+        publicKeys.length,
+        "public keys",
+      );
+    } catch (error) {
+      console.error("[OpenPGP UI] Error updating encrypt dropdown:", error);
+    }
+  }
+
+  /**
+   * Update the decrypt tab public keys dropdown
+   */
+  async updateDecryptPublicKeysDropdown() {
+    console.log("[OpenPGP UI] Updating decrypt tab public keys dropdown");
+
+    try {
+      const publicKeys = await pgpHandler.getAllPublicKeys();
+      const dropdown = document.getElementById("decryptVerifyKeySelect");
+
+      // Clear existing options except the first one
+      dropdown.innerHTML =
+        '<option value="">-- Select an imported public key (optional) --</option>';
+
+      // Add options for each public key
+      publicKeys.forEach((key) => {
+        const option = document.createElement("option");
+        option.value = key.fingerprint;
+        option.textContent = `${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
+        dropdown.appendChild(option);
+      });
+
+      console.log(
+        "[OpenPGP UI] Decrypt dropdown updated with",
+        publicKeys.length,
+        "public keys",
+      );
+    } catch (error) {
+      console.error("[OpenPGP UI] Error updating decrypt dropdown:", error);
+    }
+  }
+
   async encryptedText(fingerprint) {
     const textarea = document.getElementById("encryptedText");
     console.log(
@@ -866,6 +1001,59 @@ class KeyManagement {
   }
 
   /**
+   * Export a stored public key
+   *
+   * @param {string} fingerprint - Key fingerprint
+   */
+  async exportStoredPublicKey(fingerprint) {
+    console.log("[OpenPGP UI] Exporting stored public key:", fingerprint);
+
+    try {
+      const key = await pgpHandler.getPublicKeyByFingerprint(fingerprint);
+      if (key && key.publicKey) {
+        // Display key in textarea
+        const textarea = document.getElementById("exportedPublicKey");
+        const outputDiv = document.getElementById("exportedPublicOutput");
+
+        textarea.value = key.publicKey;
+        setVisible(outputDiv, true);
+
+        // Scroll to the output
+        outputDiv.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    } catch (error) {
+      console.error("[OpenPGP UI] Error exporting public key:", error);
+      alert("Error exporting public key: " + error.message);
+    }
+  }
+
+  /**
+   * Delete a stored public key
+   *
+   * @param {string} fingerprint - Key fingerprint
+   */
+  async deletePublicKey(fingerprint) {
+    console.log("[OpenPGP UI] Delete public key requested:", fingerprint);
+
+    if (
+      !confirm(
+        "Are you sure you want to delete this public key? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await pgpHandler.deletePublicKey(fingerprint);
+      console.log("[OpenPGP UI] Public key deleted successfully");
+      await this.refreshPublicKeys();
+    } catch (error) {
+      console.error("[OpenPGP UI] Error deleting public key:", error);
+      alert("Error deleting public key: " + error.message);
+    }
+  }
+
+  /**
    * Import a private key
    */
   async importKey() {
@@ -875,12 +1063,8 @@ class KeyManagement {
     const keyText = document.getElementById("importKey").value.trim();
     const passphrase = document.getElementById("importPassphrase").value;
 
-    if (!keyText || !passphrase) {
-      showStatus(
-        statusEl,
-        "Please provide both the private key and passphrase",
-        "error",
-      );
+    if (!keyText) {
+      showStatus(statusEl, "Please provide a key to import", "error");
       return;
     }
 
@@ -888,23 +1072,79 @@ class KeyManagement {
     this.importBtn.disabled = true;
 
     try {
-      const result = await pgpHandler.importPrivateKey(keyText, passphrase);
+      // Detect if it's a private or public key
+      let result;
+      let isPrivateKey = false;
 
-      if (result.success) {
-        console.log("[OpenPGP UI] Key imported successfully");
-        showStatus(
-          statusEl,
-          `Key imported successfully! Fingerprint: ${result.fingerprint}`,
-          "success",
-        );
+      try {
+        // Try to read as private key first
+        await openpgp.readPrivateKey({ armoredKey: keyText });
+        isPrivateKey = true;
+        console.log("[OpenPGP UI] Detected private key");
+      } catch (e) {
+        // If it fails, it might be a public key
+        try {
+          await openpgp.readKey({ armoredKey: keyText });
+          isPrivateKey = false;
+          console.log("[OpenPGP UI] Detected public key");
+        } catch (e2) {
+          throw new Error("Invalid key format");
+        }
+      }
 
-        document.getElementById("importKey").value = "";
-        document.getElementById("importPassphrase").value = "";
+      if (isPrivateKey) {
+        // Import as private key (requires passphrase)
+        if (!passphrase) {
+          showStatus(
+            statusEl,
+            "Please provide the passphrase for the private key",
+            "error",
+          );
+          this.importBtn.disabled = false;
+          return;
+        }
 
-        await this.refreshKeys();
+        result = await pgpHandler.importPrivateKey(keyText, passphrase);
+
+        if (result.success) {
+          console.log("[OpenPGP UI] Private key imported successfully");
+          showStatus(
+            statusEl,
+            `Private key imported successfully! Fingerprint: ${result.fingerprint}`,
+            "success",
+          );
+
+          document.getElementById("importKey").value = "";
+          document.getElementById("importPassphrase").value = "";
+
+          await this.refreshKeys();
+        } else {
+          console.error(
+            "[OpenPGP UI] Private key import failed:",
+            result.error,
+          );
+          showStatus(statusEl, `Error: ${result.error}`, "error");
+        }
       } else {
-        console.error("[OpenPGP UI] Key import failed:", result.error);
-        showStatus(statusEl, `Error: ${result.error}`, "error");
+        // Import as public key (no passphrase needed)
+        result = await pgpHandler.importPublicKey(keyText);
+
+        if (result.success) {
+          console.log("[OpenPGP UI] Public key imported successfully");
+          showStatus(
+            statusEl,
+            `Public key imported successfully! Fingerprint: ${result.fingerprint}`,
+            "success",
+          );
+
+          document.getElementById("importKey").value = "";
+          document.getElementById("importPassphrase").value = "";
+
+          await this.refreshPublicKeys();
+        } else {
+          console.error("[OpenPGP UI] Public key import failed:", result.error);
+          showStatus(statusEl, `Error: ${result.error}`, "error");
+        }
       }
     } catch (error) {
       console.error("[OpenPGP UI] Unexpected error during import:", error);
@@ -965,10 +1205,17 @@ class EncryptionController {
     this.encryptBtn = document.getElementById("encryptBtn");
     this.signCheckbox = document.getElementById("encryptSign");
     this.signOptions = document.getElementById("encryptSignOptions");
+    this.manualKeyToggle = document.getElementById("encryptManualKeyToggle");
+    this.manualKeySection = document.getElementById("encryptRecipientManual");
 
     this.encryptBtn.addEventListener("click", () => this.encrypt());
     this.signCheckbox.addEventListener("change", () => {
       setVisible(this.signOptions, this.signCheckbox.checked);
+    });
+
+    // Handle toggle for manual key entry
+    this.manualKeyToggle.addEventListener("change", () => {
+      setVisible(this.manualKeySection, this.manualKeyToggle.checked);
     });
 
     document
@@ -996,8 +1243,29 @@ class EncryptionController {
 
     const statusEl = document.getElementById("encryptStatus");
     const message = document.getElementById("encryptMessage").value.trim();
-    const publicKey = document.getElementById("encryptRecipient").value.trim();
     const shouldSign = document.getElementById("encryptSign").checked;
+    const useManualKey = document.getElementById(
+      "encryptManualKeyToggle",
+    ).checked;
+
+    // Get public key from dropdown or manual entry
+    let publicKey = "";
+    if (useManualKey) {
+      // Use manual entry
+      publicKey = document.getElementById("encryptRecipient").value.trim();
+    } else {
+      // Use dropdown - get the selected key
+      const selectedFingerprint = document.getElementById(
+        "encryptRecipientSelect",
+      ).value;
+      if (selectedFingerprint) {
+        const key =
+          await pgpHandler.getPublicKeyByFingerprint(selectedFingerprint);
+        if (key && key.publicKey) {
+          publicKey = key.publicKey;
+        }
+      }
+    }
 
     if (!message || !publicKey) {
       showStatus(
@@ -1089,6 +1357,8 @@ class DecryptionController {
     console.log("[OpenPGP UI] Initializing decryption controller");
 
     this.decryptBtn = document.getElementById("decryptBtn");
+    this.manualKeyToggle = document.getElementById("decryptManualKeyToggle");
+    this.manualKeySection = document.getElementById("decryptVerifyKeyManual");
 
     this.decryptBtn.addEventListener("click", () => this.decrypt());
     document
@@ -1096,6 +1366,11 @@ class DecryptionController {
       .addEventListener("click", () => {
         this.copyToClipboard("decryptedText");
       });
+
+    // Handle toggle for manual key entry
+    this.manualKeyToggle.addEventListener("change", () => {
+      setVisible(this.manualKeySection, this.manualKeyToggle.checked);
+    });
 
     // Trigger decrypt when Enter is pressed in passphrase field
     document
@@ -1118,8 +1393,29 @@ class DecryptionController {
     const encrypted = document.getElementById("decryptMessage").value.trim();
     const privateKeyFingerprint = document.getElementById("decryptKey").value;
     const passphrase = document.getElementById("decryptPassphrase").value;
-    const verifyWithKey =
-      document.getElementById("decryptVerifyKey").value.trim() || null;
+    const useManualKey = document.getElementById(
+      "decryptManualKeyToggle",
+    ).checked;
+
+    // Get public key from dropdown or manual entry (for signature verification)
+    let verifyWithKey = null;
+    if (useManualKey) {
+      // Use manual entry
+      verifyWithKey =
+        document.getElementById("decryptVerifyKey").value.trim() || null;
+    } else {
+      // Use dropdown - get the selected key
+      const selectedFingerprint = document.getElementById(
+        "decryptVerifyKeySelect",
+      ).value;
+      if (selectedFingerprint) {
+        const key =
+          await pgpHandler.getPublicKeyByFingerprint(selectedFingerprint);
+        if (key && key.publicKey) {
+          verifyWithKey = key.publicKey;
+        }
+      }
+    }
 
     if (!encrypted || !privateKeyFingerprint || !passphrase) {
       showStatus(
@@ -1395,6 +1691,156 @@ class VerificationController {
 }
 
 /**
+ * Settings Controller — manages backup export/import and master password UI in Settings tab
+ */
+class SettingsController {
+  constructor() {
+    console.log("[OpenPGP UI] Initializing settings controller");
+
+    document
+      .getElementById("exportBackupBtn")
+      .addEventListener("click", () => this.exportBackup());
+
+    const importBackupBtn = document.getElementById("importBackupBtn");
+    const importBackupFile = document.getElementById("importBackupFile");
+
+    importBackupBtn.addEventListener("click", () => {
+      importBackupFile.value = "";
+      importBackupFile.click();
+    });
+
+    importBackupFile.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) {
+        this.importBackup(e.target.files[0]);
+      }
+    });
+  }
+
+  async exportBackup() {
+    const statusEl = document.getElementById("backupStatus");
+    showStatus(statusEl, "Preparing backup...", "info");
+
+    try {
+      const hasMasterPassword = await pgpHandler.isMasterPasswordRequired();
+
+      const keysResult = await browser.storage.local.get("MiniPGP_keys");
+      const keysData = keysResult.MiniPGP_keys;
+
+      const publicKeys = await browser.storage.local.get("MiniPGP_public_keys");
+      const publicKeysData = publicKeys.MiniPGP_public_keys;
+
+      if (!keysData && !publicKeysData) {
+        showStatus(
+          statusEl,
+          "No private or public keys found to export.",
+          "error",
+        );
+        return;
+      }
+
+      let backup;
+      let filename;
+
+      if (hasMasterPassword) {
+        const verifyResult = await browser.storage.local.get(
+          "MiniPGP_master_verify",
+        );
+        const verifyData = verifyResult.MiniPGP_master_verify;
+
+        backup = JSON.stringify(
+          {
+            MiniPGP_keys: keysData,
+            MiniPGP_master_verify: verifyData,
+            MiniPGP_public_keys: publicKeys,
+          },
+          null,
+          2,
+        );
+        filename = "OpenPGP_full_backup_encrypted.json";
+      } else {
+        backup = JSON.stringify(
+          {
+            MiniPGP_keys: keysData,
+            MiniPGP_public_keys: publicKeys,
+          },
+          null,
+          2,
+        );
+        filename = "OpenPGP_full_backup.json";
+      }
+
+      const blob = new Blob([backup], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
+      browser.downloads
+        .download({ url, filename, saveAs: true })
+        .then(() => {
+          URL.revokeObjectURL(url);
+          showStatus(statusEl, `Backup saved as ${filename}`, "success");
+        })
+        .catch((err) => {
+          URL.revokeObjectURL(url);
+          showStatus(statusEl, `Download failed: ${err.message}`, "error");
+        });
+    } catch (err) {
+      console.error("[OpenPGP UI] Export backup failed:", err);
+      showStatus(statusEl, `Error: ${err.message}`, "error");
+    }
+  }
+
+  importBackup(file) {
+    const statusEl = document.getElementById("backupStatus");
+    showStatus(statusEl, "Reading backup file...", "info");
+
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+
+        if (!parsed.MiniPGP_keys) {
+          showStatus(
+            statusEl,
+            "Invalid backup file: missing MiniPGP_keys.",
+            "error",
+          );
+          return;
+        }
+
+        const dataToStore = {
+          MiniPGP_keys: parsed.MiniPGP_keys,
+          MiniPGP_public_keys: parsed.MiniPGP_public_keys,
+        };
+
+        if (parsed.MiniPGP_master_verify) {
+          dataToStore.MiniPGP_master_verify = parsed.MiniPGP_master_verify;
+        }
+
+        await browser.storage.local.set(dataToStore);
+
+        const imported = Object.keys(dataToStore).join(", ");
+        showStatus(
+          statusEl,
+          `Backup imported successfully (${imported}). Please reload the extension.`,
+          "success",
+        );
+
+        console.log("[OpenPGP UI] Backup imported:", imported);
+      } catch (err) {
+        console.error("[OpenPGP UI] Import backup failed:", err);
+        showStatus(statusEl, `Error reading backup: ${err.message}`, "error");
+      }
+    };
+
+    reader.onerror = () => {
+      showStatus(statusEl, "Failed to read the backup file.", "error");
+    };
+
+    reader.readAsText(file);
+  }
+}
+
+/**
  * Initialize all controllers when DOM is ready
  */
 document.addEventListener("DOMContentLoaded", () => {
@@ -1407,6 +1853,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const decryptionController = new DecryptionController();
   const signingController = new SigningController();
   const verificationController = new VerificationController();
+  const settingsController = new SettingsController();
 
   // Set up debug mode toggle
   const debugCheckbox = document.getElementById("debugMode");
