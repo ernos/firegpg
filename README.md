@@ -1,6 +1,16 @@
 # OpenPGP Extension
 
-A comprehensive Firefox extension for PGP/PGP encryption, decryption, signing, and verification directly in your browser.
+This project is mainly for people using Tor Browser and Firefox where PGP messages are common, especially on sites where you must decrypt a message to log in or encrypt one before sending it.
+
+Many people are correctly taught: “Do not install random Tor extensions.” That warning is important. But this extension was built to reduce risk while still helping with a real problem people face every day.
+
+Think of it like a lockbox that stays inside your browser:
+- Your keys and messages are handled inside the extension, not sent to some mystery website.
+- The extension asks for very limited permissions (`storage` and `downloads`) instead of broad access to everything.
+- The code is open and readable, with no hidden/packed tricks, so anyone can inspect what it does.
+- It uses OpenPGP.js, a widely reviewed crypto library used by many developers.
+
+So, in simple terms for a 10-year-old: this tool is like doing your secret-note math in your own notebook at home, instead of giving your note to a stranger to solve for you. It still follows the golden rule (be careful with extensions), but it is designed to be transparent, minimal, and focused on keeping your private messages private.
 
 ## Features
 
