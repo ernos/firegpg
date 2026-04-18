@@ -12,11 +12,12 @@ Think of it like a lockbox that stays inside your browser:
 So, in simple terms for a 10-year-old: this tool is like doing your secret-note math in your own notebook at home (and **locked in a safe** if the master password is enabled, ***which it should be!***), instead of saving all keys, messages(encrypted and decrypted) on your hard-drive.
 It still follows the golden rule (be careful with extensions), but it is designed to be transparent, minimal, and focused on keeping your private messages private.
 
-**Ideal scenarios when this extension might be useful**
-- If you want to have Tor Browser on a USB stick and want your PGP keys to be portable as well
-     ***(The will simply be saved in your regular Firefox profile directory, depends on which OS you are running)***
-- If you want to create a LIVE USB with a privacy-oriented operating system with encrypted root partition and include a portable version of TOR with the extension
-- If you are using Windows and outdated versions of PGP programs (Yes, I'm talking about you, GPG4USB)
+## Ideal scenarios when this extension might be useful
+
+- If you want to have Tor Browser on a USB stick and want your PGP keys to be portable as well ***TODO: Make a tutorial for how to create a portable USB TOR drive***
+     ***(They will simply be saved the regular Firefox profile directory, depends on what OS you are running)***
+- If you want to create a **LIVE USB** with a privacy-oriented operating system with encrypted root partition and include a portable version of TOR with the extension
+- If you are using Windows and outdated versions of PGP programs (Yes, I'm talking about you, **GPG4USB**)
      ***This extensions uses a library of OpenPGP which is much more up to date and much safer to use***
 - Just for simplicity. No need to remember nugpg arguments or anything else - ***It's super-easy to use***
   
