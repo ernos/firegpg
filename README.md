@@ -1,7 +1,25 @@
 # OpenPGP Extension
 
-A comprehensive Firefox extension for PGP/PGP encryption, decryption, signing, and verification directly in your browser.
+This project is mainly for people using Tor Browser and Firefox where PGP messages are common, especially on sites where you must decrypt a message to log in or encrypt one before sending it.
+Many people are correctly taught: “Do not install random Tor extensions.” That warning is important. But this extension was built to reduce risk while still helping with a real problem people face every day.
+Think of it like a lockbox that stays inside your browser:
 
+    Your keys and messages are handled inside the extension, not sent to some mystery website or saved to your computer (it's easy to forget delete message files, decrypted messages and private keys       should always be encrypted/behind an admin password)
+    The extension asks for very limited permissions (storage and downloads). Storage is for saving private keys, public keys and the master password.
+    The code is open and readable, with no hidden/packed tricks, so anyone can inspect what it does.
+    It uses OpenPGP.js, a widely reviewed crypto library used by many developers.
+
+So, in simple terms for a 10-year-old: this tool is like doing your secret-note math in your own notebook at home (and **locked in a safe** if the master password is enabled, ***which it should be!***), instead of saving all keys, messages(encrypted and decrypted) on your hard-drive.
+It still follows the golden rule (be careful with extensions), but it is designed to be transparent, minimal, and focused on keeping your private messages private.
+
+**Ideal scenarios when this extension might be useful**
+- If you want to have Tor Browser on a USB stick and want your PGP keys to be portable as well
+     ***(The will simply be saved in your regular Firefox profile directory, depends on which OS you are running)***
+- If you want to create a LIVE USB with a privacy-oriented operating system with encrypted root partition and include a portable version of TOR with the extension
+- If you are using Windows and outdated versions of PGP programs (Yes, I'm talking about you, GPG4USB)
+     ***This extensions uses a library of OpenPGP which is much more up to date and much safer to use***
+- Just for simplicity. No need to remember nugpg arguments or anything else - ***It's super-easy to use***
+  
 ## Features
 
  **Complete PGP Functionality**
