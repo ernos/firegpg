@@ -3,7 +3,9 @@
   "manifest_version": 2,
   "name": "OpenPGP - Encrypt/Decrypt/Sign/Verify",
   "description": "OpenPGP brings full OpenPGP (Pretty Good Privacy) encryption and decryption directly into your browser — no external software required. Many websites, forums, and online markets still rely on PGP-encrypted messages that users are expected to manually copy into a separate application to decrypt. This extension eliminates that friction entirely. With FireGPG, you can generate key pairs, encrypt, decrypt, sign, and verify PGP messages without ever leaving Firefox. This is especially useful on Windows, where OpenPGP support isn't built into the OS the way GnuPG is on Linux and macOS — meaning most users resort to aging, unmaintained tools. FireGPG is a modern, browser-native alternative: lightweight, secure, and built to current cryptographic standards. Key features: 1. Full public/private key-pair encryption and decryption 2. Works entirely in-browser — no native dependencies 3. Clean, accessible interface for everyday PGP use 4. Built on the widely audited OpenPGP.js library",
-  "permissions": ["storage", "downloads"],
+  "permissions": [
+    "storage", "downloads"
+  ],
   "browser_action": {
     "default_icon": {
       "128": "icon/icon-128.png",
@@ -14,9 +16,13 @@
     },
     "default_title": "OpenPGP"
   },
-  "web_accessible_resources": ["lib/openpgp.min.js"],
+  "web_accessible_resources": [
+    "lib/openpgp.min.js"
+  ],
   "background": {
-    "scripts": ["js/background.js"]
+    "scripts": [
+      "js/background.js"
+    ]
   },
   "sidebar_action": {
     "default_panel": "index.html",
@@ -32,7 +38,9 @@
   "browser_specific_settings": {
     "gecko": {
       "data_collection_permissions": {
-        "required": ["none"]
+        "required": [
+          "none"
+        ]
       }
     },
     "id": "@OpenPGP"

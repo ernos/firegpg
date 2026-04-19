@@ -840,6 +840,7 @@ class KeyManagement {
       // Also refresh the encrypt and decrypt tab dropdowns
       this.updateEncryptPublicKeysDropdown();
       this.updateDecryptPublicKeysDropdown();
+      this.verifyRecipientsPublicKeyDropDown();
     } catch (error) {
       console.error("[OpenPGP UI] Error refreshing public keys:", error);
       this.publickeysList.innerHTML =
@@ -847,6 +848,36 @@ class KeyManagement {
     }
   }
 
+  async verifyRecipientsPublicKeyDropDown() {
+    console.log(
+      "[OpenPGP UI] Updating verify tab recipients public keys dropdown",
+    );
+
+    try {
+      const publicKeys = await pgpHandler.getAllPublicKeys();
+      const dropdown = document.getElementById("verifyRecipientsPublicKey");
+
+      // Clear existing options except the first one
+      dropdown.innerHTML =
+        '<option value="">-- Select an imported public key --</option>';
+
+      // Add options for each public key
+      publicKeys.forEach((key) => {
+        const option = document.createElement("option");
+        option.value = key.fingerprint;
+        option.textContent = `${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
+        dropdown.appendChild(option);
+      });
+
+      console.log(
+        "[OpenPGP UI] Verify Tab's Dropdown updated with",
+        publicKeys.length,
+        "public keys",
+      );
+    } catch (error) {
+      console.error("[OpenPGP UI] Error updating verify tabs dropdown:", error);
+    }
+  }
   /**
    * Update the encrypt tab public keys dropdown
    */
@@ -1208,14 +1239,25 @@ class EncryptionController {
     this.manualKeyToggle = document.getElementById("encryptManualKeyToggle");
     this.manualKeySection = document.getElementById("encryptRecipientManual");
 
+    //"verifyRecipientsHide" is the div containing textarea verifyRecipients
+    //verifyManualKeyToggle is the checkbox which hides or shows verifyRecipientsHide div
+    this.verifyManualKeyToggle = document.getElementById(
+      "verifyManualKeyToggle",
+    );
+    this.verifyRecipientHide = document.getElementById("verifyRecipientHide");
+
     this.encryptBtn.addEventListener("click", () => this.encrypt());
     this.signCheckbox.addEventListener("change", () => {
       setVisible(this.signOptions, this.signCheckbox.checked);
     });
 
-    // Handle toggle for manual key entry
+    // Handle toggle for manual key entry in ENCRYPT tab
     this.manualKeyToggle.addEventListener("change", () => {
       setVisible(this.manualKeySection, this.manualKeyToggle.checked);
+    });
+    // Handle toggle for manual key entry in VERIFY tab
+    this.verifyManualKeyToggle.addEventListener("change", () => {
+      setVisible(this.verifyRecipientHide, this.verifyManualKeyToggle.checked);
     });
 
     document
@@ -1610,7 +1652,28 @@ class VerificationController {
 
     const statusEl = document.getElementById("verifyStatus");
     const signedMessage = document.getElementById("verifyMessage").value.trim();
-    const publicKey = document.getElementById("verifyPublicKey").value.trim();
+    const useManualKey = document.getElementById(
+      "verifyManualKeyToggle",
+    ).checked;
+
+    // Get public key from dropdown or manual entry
+    let publicKey = "";
+    if (useManualKey) {
+      // Use manual entry
+      publicKey = document.getElementById("verifyRecipient").value.trim();
+    } else {
+      // Use dropdown - get the selected key
+      const selectedFingerprint = document.getElementById(
+        "verifyRecipientsPublicKey",
+      ).value;
+      if (selectedFingerprint) {
+        const key =
+          await pgpHandler.getPublicKeyByFingerprint(selectedFingerprint);
+        if (key && key.publicKey) {
+          publicKey = key.publicKey;
+        }
+      }
+    }
 
     if (!signedMessage || !publicKey) {
       showStatus(
@@ -1654,11 +1717,14 @@ class VerificationController {
                         </div>
                     `;
         }
+        const verifyMsgWrapper = document.getElementById("verifyMessageTextWrapper");
+        const verifyMsgTextarea = document.getElementById("verifyMessageText");
         if (result.message) {
-          document.getElementById("verifyMessageText").innerHTML = `
-                        <h3>Message:</h3>
-                        <pre>${this.escapeHtml(result.message)}</pre>
-                    `;
+          verifyMsgTextarea.value = result.message;
+          verifyMsgWrapper.classList.remove("hidden");
+        } else {
+          verifyMsgTextarea.value = "";
+          verifyMsgWrapper.classList.add("hidden");
         }
 
         setVisible(document.getElementById("verifyOutput"), true);

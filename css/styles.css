@@ -638,15 +638,6 @@ label:has(input[type="radio"]) {
   margin-bottom: var(--spacing-xs);
 }
 
-#verifyMessageText pre {
-  background: var(--bg-secondary);
-  padding: var(--spacing-md);
-  border-radius: var(--border-radius);
-  overflow-x: auto;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-}
-
 /* ===== Footer ===== */
 footer {
   margin-top: var(--spacing-lg);

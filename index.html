@@ -193,7 +193,10 @@
         </div>
         <div class="form-group">
           <label for="encryptMessage">Message to Encrypt:</label>
-          <textarea id="encryptMessage" rows="6" placeholder="Enter your message here"></textarea>
+          <div class="textarea-with-copy">
+            <textarea id="encryptMessage" rows="6" placeholder="Enter your message here"></textarea>
+            <button class="copy-btn" data-target="encryptMessage" title="Copy to clipboard">📋</button>
+          </div>
         </div>
         <div class="form-group">
           <label>
@@ -232,7 +235,10 @@
       <section class="card">
         <div class="form-group">
           <label for="decryptMessage">Encrypted Message:</label>
-          <textarea id="decryptMessage" rows="8" placeholder="Paste encrypted message here"></textarea>
+          <div class="textarea-with-copy">
+            <textarea id="decryptMessage" rows="8" placeholder="Paste encrypted message here"></textarea>
+            <button class="copy-btn" data-target="decryptMessage" title="Copy to clipboard">📋</button>
+          </div>
         </div>
         <div class="form-group">
           <label for="decryptKey">Select Your Private Key:</label>
@@ -282,10 +288,13 @@
       <section class="card">
         <div class="form-group">
           <label for="signMessage">Message to Sign:</label>
-          <textarea id="signMessage" rows="6" placeholder="Enter your message here"></textarea>
+          <div class="textarea-with-copy">
+            <textarea id="signMessage" rows="6" placeholder="Enter your message here"></textarea>
+            <button class="copy-btn" data-target="signMessage" title="Copy to clipboard">📋</button>
+          </div>
         </div>
         <div class="form-group">
-          <label for="signKey">Select Your Private Key:</label>
+          <label for="signKey">Sign message with this private key:</label>
           <select id="signKey"></select>
         </div>
         <div class="form-group">
@@ -307,7 +316,10 @@
 
         <div id="signedOutput" class="output hidden">
           <h3>Signed Message:</h3>
-          <textarea id="signedText" rows="10" readonly></textarea>
+          <div class="textarea-with-copy">
+            <textarea id="signedText" rows="10" readonly></textarea>
+            <button class="copy-btn" data-target="signedText" title="Copy to clipboard">📋</button>
+          </div>
           <button id="copySignedBtn" class="btn btn-secondary">Copy to Clipboard</button>
         </div>
       </section>
@@ -319,19 +331,43 @@
 
       <section class="card">
         <div class="form-group">
-          <label for="verifyMessage">Signed Message:</label>
-          <textarea id="verifyMessage" rows="8" placeholder="Paste signed message here"></textarea>
+          <label for="verifyMessage">Message to Verify</label>
+          <div class="textarea-with-copy">
+            <textarea id="verifyMessage" rows="8" placeholder="Paste signed message here"></textarea>
+            <button class="copy-btn" data-target="verifyMessage" title="Copy to clipboard">📋</button>
+          </div>
         </div>
+
         <div class="form-group">
-          <label for="verifyPublicKey">Signer's Public Key:</label>
-          <textarea id="verifyPublicKey" rows="4" placeholder="Paste signer's public key here"></textarea>
+          <label for="verifyRecipientsPublicKey">Recipient's Public Key:</label>
+          <select id="verifyRecipientsPublicKey">
+            <option value="">-- Select a recipients imported public key --</option>
+          </select>
+          <div style="margin-top: 8px;">
+            <label>
+              <input type="checkbox" id="verifyManualKeyToggle">
+              Use manual key entry instead
+            </label>
+          </div>
         </div>
+        <div class="form-group hidden" id="verifyRecipientHide">
+          <label for="verifyRecipient">Or paste recipient's public key:</label>
+          <textarea id="verifyRecipient" rows="4" placeholder="Paste recipient's public key here"></textarea>
+        </div>
+
+
         <button id="verifyBtn" class="btn btn-primary">Verify Signature</button>
         <div id="verifyStatus" class="status"></div>
 
         <div id="verifyOutput" class="output hidden">
           <div id="verifyResult" class="verify-result"></div>
-          <div id="verifyMessageText"></div>
+          <div id="verifyMessageTextWrapper" class="hidden">
+            <h3>Message:</h3>
+            <div class="textarea-with-copy">
+              <textarea id="verifyMessageText" rows="10" readonly></textarea>
+              <button class="copy-btn" data-target="verifyMessageText" title="Copy to clipboard">📋</button>
+            </div>
+          </div>
         </div>
       </section>
     </div>
