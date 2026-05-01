@@ -131,7 +131,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 /**
  * Create context menu items for PGP operations
  */
-this.browser.contextMenus.create(
+browser.contextMenus.create(
   {
     id: "OpenPGP-encrypt-selection",
     title: "Encrypt selected text with PGP",
