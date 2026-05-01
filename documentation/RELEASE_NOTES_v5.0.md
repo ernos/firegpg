@@ -1,4 +1,4 @@
-# OpenPGP Extension v5.0 Release Notes
+# PGP Suite - v5.0 Release Notes
 
 ## Overview
 

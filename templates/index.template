@@ -42,14 +42,14 @@
     <!-- Header Section -->
     <header>
       <!--<h1>🔐 OpenPGP</h1>-->
-      <center>
-        <img src="icon/banner.png" width="512" height="128">
-        <p class="subtitle">Generate a key-pair in seconds! Encrypt or decrypt PGP/PGP messages directly in the browser.
-          Full support of signatures and verifications (SIGNATURE MESSAGES). All you need and the secrets are stored in
-          localStorage - encrypted at runtime while wallet is unlocked.</p>
-        <br>
-        <small>Version: __VERSION__</small>
-      </center>
+      <div style="background-color: #0c2744;">
+      <img src="icon/banner.png" width="800" height="260" style="display:block;margin:0 auto;">
+    </div>
+      <p class="subtitle">Generate a key-pair in seconds! Encrypt or decrypt PGP/PGP messages directly in the browser.
+        Full support of signatures and verifications (SIGNATURE MESSAGES). All you need and the secrets are stored in
+        localStorage - encrypted at runtime while wallet is unlocked.</p>
+      <br>
+      <small>Version: __VERSION__</small>
     </header>
 
     <!-- Tab Navigation -->
