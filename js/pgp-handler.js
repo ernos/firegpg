@@ -1198,6 +1198,80 @@ class PGPHandler {
     debugLog("Key not found for export");
     return null;
   }
+
+  /**
+   * Encrypt a file with a recipient's public key
+   *
+   * @param {Object} options
+   * @param {Uint8Array} options.fileBytes - Raw file bytes
+   * @param {string} options.publicKey - Recipient's armored public key
+   * @param {string} options.fileName - Original file name
+   * @returns {Promise<Object>} { success, encrypted, suggestedFileName }
+   */
+  async encryptFile({ fileBytes, publicKey, fileName }) {
+    debugLog("Encrypting file", { fileName, size: fileBytes.length });
+    try {
+      const recipientKey = await openpgp.readKey({ armoredKey: publicKey });
+      const message = await openpgp.createMessage({
+        binary: fileBytes,
+        filename: fileName,
+      });
+      const encrypted = await openpgp.encrypt({
+        message,
+        encryptionKeys: recipientKey,
+        format: "armored",
+      });
+      debugLog("File encryption successful");
+      return { success: true, encrypted, suggestedFileName: fileName + ".pgp" };
+    } catch (error) {
+      errorLog("File encryption failed", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Decrypt a PGP-encrypted file
+   *
+   * @param {Object} options
+   * @param {string} options.encryptedArmor - Armored PGP message text
+   * @param {string} options.privateKeyFingerprint - Fingerprint of private key to use
+   * @param {string} options.passphrase - Passphrase for the private key
+   * @returns {Promise<Object>} { success, data: Uint8Array, filename }
+   */
+  async decryptFile({ encryptedArmor, privateKeyFingerprint, passphrase }) {
+    debugLog("Decrypting file", { privateKeyFingerprint });
+    try {
+      const keyData = await this.getKeyByFingerprint(privateKeyFingerprint);
+      if (!keyData) throw new Error("Private key not found");
+
+      const privateKey = await openpgp.readPrivateKey({
+        armoredKey: await this._getPrivateKeyArmor(keyData),
+      });
+      const decryptedPrivateKey = await openpgp.decryptKey({
+        privateKey,
+        passphrase,
+      });
+
+      const message = await openpgp.readMessage({
+        armoredMessage: encryptedArmor,
+      });
+      const result = await openpgp.decrypt({
+        message,
+        decryptionKeys: decryptedPrivateKey,
+        format: "binary",
+      });
+
+      debugLog("File decryption successful", { filename: result.filename });
+      return {
+        success: true,
+        data: result.data,
+        filename: result.filename || null,
+      };
+    } catch (error) {
+      errorLog("File decryption failed", error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 // Create global instance

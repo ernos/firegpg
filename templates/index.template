@@ -42,14 +42,14 @@
     <!-- Header Section -->
     <header>
       <!--<h1>🔐 OpenPGP</h1>-->
-      <center>
-        <img src="icon/banner.png" width="512" height="128">
-        <p class="subtitle">Generate a key-pair in seconds! Encrypt or decrypt PGP/PGP messages directly in the browser.
-          Full support of signatures and verifications (SIGNATURE MESSAGES). All you need and the secrets are stored in
-          localStorage - encrypted at runtime while wallet is unlocked.</p>
-        <br>
-        <small>Version: __VERSION__</small>
-      </center>
+      <div style="background-color: #0c2744;">
+      <img src="icon/banner.png" width="800" height="260" style="display:block;margin:0 auto;">
+    </div>
+      <p class="subtitle">Generate a key-pair in seconds! Encrypt or decrypt PGP/PGP messages directly in the browser.
+        Full support of signatures and verifications (SIGNATURE MESSAGES). All you need and the secrets are stored in
+        localStorage - encrypted at runtime while wallet is unlocked.</p>
+      <br>
+      <small>Version: __VERSION__</small>
     </header>
 
     <!-- Tab Navigation -->
@@ -59,6 +59,7 @@
       <button class="tab-button" data-tab="decrypt">Decrypt</button>
       <button class="tab-button" data-tab="sign">Sign</button>
       <button class="tab-button" data-tab="verify">Verify</button>
+      <button class="tab-button" data-tab="files">Files</button>
       <button class="tab-button" data-tab="settings">Settings</button>
     </nav>
 
@@ -224,6 +225,7 @@
             <button class="copy-btn" data-target="encryptedText" title="Copy to clipboard">📋</button>
           </div>
           <button id="copyEncryptedBtn" class="btn btn-secondary">Copy to Clipboard</button>
+          <button id="clearEncryptedBtn" class="btn btn-secondary">Clear</button>
         </div>
       </section>
     </div>
@@ -277,6 +279,7 @@
           </div>
           <div id="signatureInfo" class="signature-info"></div>
           <button id="copyDecryptedBtn" class="btn btn-secondary">Copy to Clipboard</button>
+          <button id="clearDecryptedBtn" class="btn btn-secondary">Clear</button>
         </div>
       </section>
     </div>
@@ -321,6 +324,7 @@
             <button class="copy-btn" data-target="signedText" title="Copy to clipboard">📋</button>
           </div>
           <button id="copySignedBtn" class="btn btn-secondary">Copy to Clipboard</button>
+          <button id="clearSignedBtn" class="btn btn-secondary">Clear</button>
         </div>
       </section>
     </div>
@@ -357,6 +361,7 @@
 
 
         <button id="verifyBtn" class="btn btn-primary">Verify Signature</button>
+        <button id="clearVerifyBtn" class="btn btn-secondary">Clear</button>
         <div id="verifyStatus" class="status"></div>
 
         <div id="verifyOutput" class="output hidden">
@@ -366,9 +371,61 @@
             <div class="textarea-with-copy">
               <textarea id="verifyMessageText" rows="10" readonly></textarea>
               <button class="copy-btn" data-target="verifyMessageText" title="Copy to clipboard">📋</button>
+              <button id="clearVerifyBtn" class="btn btn-secondary">Clear</button>
             </div>
           </div>
         </div>
+      </section>
+    </div>
+
+    <!-- Files Tab -->
+    <div class="tab-content" id="files-tab">
+      <h2>File Encryption</h2>
+
+      <!-- Encrypt File -->
+      <section class="card">
+        <h3>Encrypt a File</h3>
+        <div class="form-group">
+          <label for="fileEncryptRecipientSelect">Recipient's Public Key:</label>
+          <select id="fileEncryptRecipientSelect">
+            <option value="">-- Select an imported public key --</option>
+          </select>
+          <div style="margin-top: 8px;">
+            <label>
+              <input type="checkbox" id="fileEncryptManualKeyToggle">
+              Use manual key entry instead
+            </label>
+          </div>
+        </div>
+        <div class="form-group hidden" id="fileEncryptRecipientManual">
+          <label for="fileEncryptRecipient">Paste recipient's public key:</label>
+          <textarea id="fileEncryptRecipient" rows="4" placeholder="Paste recipient's public key here"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="fileEncryptInput">Select file to encrypt:</label>
+          <input type="file" id="fileEncryptInput">
+        </div>
+        <button id="fileEncryptBtn" class="btn btn-primary">Encrypt File</button>
+        <div id="fileEncryptStatus" class="status"></div>
+      </section>
+
+      <!-- Decrypt File -->
+      <section class="card">
+        <h3>Decrypt a File</h3>
+        <div class="form-group">
+          <label for="fileDecryptKeySelect">Select Your Private Key:</label>
+          <select id="fileDecryptKeySelect"></select>
+        </div>
+        <div class="form-group">
+          <label for="fileDecryptPassphrase">Your Passphrase:</label>
+          <input type="password" id="fileDecryptPassphrase" placeholder="Your key passphrase">
+        </div>
+        <div class="form-group">
+          <label for="fileDecryptInput">Select encrypted file (.pgp):</label>
+          <input type="file" id="fileDecryptInput" accept=".pgp,.asc">
+        </div>
+        <button id="fileDecryptBtn" class="btn btn-primary">Decrypt File</button>
+        <div id="fileDecryptStatus" class="status"></div>
       </section>
     </div>
 

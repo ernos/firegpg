@@ -27,3 +27,5 @@ Thumbs.db
 node_modules/
 package-lock.json
 dist/
+
+COMMIT_MESSAGES.md

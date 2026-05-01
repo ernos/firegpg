@@ -7,6 +7,9 @@
 
 console.log("[OpenPGP UI] Initializing UI controller");
 
+// Module-level reference set during DOMContentLoaded so TabManager can reach it
+let fileController;
+
 /**
  * Display a password prompt modal dialog
  *
@@ -147,6 +150,12 @@ class TabManager {
       // Refresh key dropdowns when switching to tabs that need them
       if (["encrypt", "decrypt", "sign"].includes(tabName)) {
         this.refreshKeyDropdowns();
+      }
+      if (tabName === "files") {
+        // fileController is set after TabManager init; access via global scope
+        if (typeof fileController !== "undefined") {
+          fileController.refreshKeyDropdowns();
+        }
       }
     }
   }
@@ -841,6 +850,8 @@ class KeyManagement {
       this.updateEncryptPublicKeysDropdown();
       this.updateDecryptPublicKeysDropdown();
       this.verifyRecipientsPublicKeyDropDown();
+      this.updateEncryptPublicKeysDropdown();
+      this.updateDecryptPublicKeysDropdown();
     } catch (error) {
       console.error("[OpenPGP UI] Error refreshing public keys:", error);
       this.publickeysList.innerHTML =
@@ -886,7 +897,7 @@ class KeyManagement {
 
     try {
       const publicKeys = await pgpHandler.getAllPublicKeys();
-      const dropdown = document.getElementById("encryptRecipientSelect");
+      const dropdown = document.getElementById("fileEncryptRecipientSelect");
 
       // Clear existing options except the first one
       dropdown.innerHTML =
@@ -918,7 +929,7 @@ class KeyManagement {
 
     try {
       const publicKeys = await pgpHandler.getAllPublicKeys();
-      const dropdown = document.getElementById("decryptVerifyKeySelect");
+      const dropdown = document.getElementById("fileDecryptKeySelect");
 
       // Clear existing options except the first one
       dropdown.innerHTML =
@@ -1266,6 +1277,14 @@ class EncryptionController {
         this.updateClipboard("encryptedText");
       });
 
+    document
+      .getElementById("clearEncryptedBtn")
+      .addEventListener("click", () => {
+        document.getElementById("encryptedText").value = "";
+        setVisible(document.getElementById("encryptedOutput"), false);
+        clearStatus(document.getElementById("encryptStatus"));
+      });
+
     // Trigger encrypt when Enter is pressed in passphrase field
     document
       .getElementById("encryptSignPassphrase")
@@ -1409,6 +1428,15 @@ class DecryptionController {
         this.copyToClipboard("decryptedText");
       });
 
+    document
+      .getElementById("clearDecryptedBtn")
+      .addEventListener("click", () => {
+        document.getElementById("decryptedText").value = "";
+        document.getElementById("signatureInfo").innerHTML = "";
+        setVisible(document.getElementById("decryptedOutput"), false);
+        clearStatus(document.getElementById("decryptStatus"));
+      });
+
     // Handle toggle for manual key entry
     this.manualKeyToggle.addEventListener("change", () => {
       setVisible(this.manualKeySection, this.manualKeyToggle.checked);
@@ -1420,6 +1448,7 @@ class DecryptionController {
       .addEventListener("keypress", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
+          console.log("Enter key pressed, decrypt button");
           this.decryptBtn.click();
         }
       });
@@ -1469,6 +1498,7 @@ class DecryptionController {
     }
 
     showStatus(statusEl, "Decrypting message...", "info");
+    console.log("Decrypting message....");
     this.decryptBtn.disabled = true;
 
     try {
@@ -1545,6 +1575,12 @@ class SigningController {
     this.signBtn.addEventListener("click", () => this.sign());
     document.getElementById("copySignedBtn").addEventListener("click", () => {
       this.copyToClipboard("signedText");
+    });
+
+    document.getElementById("clearSignedBtn").addEventListener("click", () => {
+      document.getElementById("signedText").value = "";
+      setVisible(document.getElementById("signedOutput"), false);
+      clearStatus(document.getElementById("signStatus"));
     });
 
     // Trigger sign when Enter is pressed in passphrase field
@@ -1642,6 +1678,14 @@ class VerificationController {
     this.verifyBtn = document.getElementById("verifyBtn");
 
     this.verifyBtn.addEventListener("click", () => this.verify());
+
+    document.getElementById("clearVerifyBtn").addEventListener("click", () => {
+      document.getElementById("verifyResult").innerHTML = "";
+      document.getElementById("verifyMessageText").value = "";
+      setVisible(document.getElementById("verifyMessageTextWrapper"), false);
+      setVisible(document.getElementById("verifyOutput"), false);
+      clearStatus(document.getElementById("verifyStatus"));
+    });
   }
 
   /**
@@ -1717,7 +1761,9 @@ class VerificationController {
                         </div>
                     `;
         }
-        const verifyMsgWrapper = document.getElementById("verifyMessageTextWrapper");
+        const verifyMsgWrapper = document.getElementById(
+          "verifyMessageTextWrapper",
+        );
         const verifyMsgTextarea = document.getElementById("verifyMessageText");
         if (result.message) {
           verifyMsgTextarea.value = result.message;
@@ -1907,6 +1953,214 @@ class SettingsController {
 }
 
 /**
+ * File Encryption / Decryption Controller
+ */
+class FileController {
+  constructor() {
+    console.log("[OpenPGP UI] Initializing file controller");
+
+    this.fileEncryptBtn = document.getElementById("fileEncryptBtn");
+    this.fileDecryptBtn = document.getElementById("fileDecryptBtn");
+
+    document
+      .getElementById("fileEncryptManualKeyToggle")
+      .addEventListener("change", (e) => {
+        setVisible(
+          document.getElementById("fileEncryptRecipientManual"),
+          e.target.checked,
+        );
+      });
+
+    this.fileEncryptBtn.addEventListener("click", () => this.encryptFile());
+    this.fileDecryptBtn.addEventListener("click", () => this.decryptFile());
+
+    this.refreshFileTabDropdowns();
+  }
+
+  async refreshFileTabDropdowns() {
+    console.log("refreshing both pub/priv key dropdowns in file tab");
+    // Public keys for file encryption
+    const publicKeys = await pgpHandler.getAllPublicKeys();
+    const encDropdown = document.getElementById("fileEncryptRecipientSelect");
+    encDropdown.innerHTML =
+      '<option value="">-- Select an imported public key --</option>';
+    publicKeys.forEach((key) => {
+      const option = document.createElement("option");
+      option.value = key.fingerprint;
+      option.textContent = `${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
+      encDropdown.appendChild(option);
+    });
+
+    // Private keys for file decryption
+    const privateKeys = await pgpHandler.getAllKeys();
+    const decDropdown = document.getElementById("fileDecryptKeySelect");
+    decDropdown.innerHTML = "";
+    if (privateKeys.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No keys available";
+      decDropdown.appendChild(opt);
+    } else {
+      privateKeys.forEach((key) => {
+        const option = document.createElement("option");
+        option.value = key.fingerprint;
+        option.textContent = `${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
+        decDropdown.appendChild(option);
+      });
+    }
+  }
+
+  async encryptFile() {
+    console.log("encryptFile() called");
+    const statusEl = document.getElementById("fileEncryptStatus");
+    const fileInput = document.getElementById("fileEncryptInput");
+    const useManual = document.getElementById(
+      "fileEncryptManualKeyToggle",
+    ).checked;
+
+    if (!fileInput.files || !fileInput.files[0]) {
+      showStatus(statusEl, "Please select a file to encrypt", "error");
+      return;
+    }
+
+    let publicKeyArmor;
+    if (useManual) {
+      publicKeyArmor = document
+        .getElementById("fileEncryptRecipient")
+        .value.trim();
+      if (!publicKeyArmor) {
+        showStatus(
+          statusEl,
+          "Please paste the recipient's public key",
+          "error",
+        );
+        return;
+      }
+    } else {
+      const fingerprint = document.getElementById(
+        "fileEncryptRecipientSelect",
+      ).value;
+      if (!fingerprint) {
+        showStatus(statusEl, "Please select a recipient key", "error");
+        return;
+      }
+      const keyObj = await pgpHandler.getPublicKeyByFingerprint(fingerprint);
+      if (!keyObj) {
+        showStatus(statusEl, "Key not found", "error");
+        return;
+      }
+      publicKeyArmor = keyObj.publicKey;
+    }
+
+    const file = fileInput.files[0];
+    showStatus(statusEl, `Encrypting ${file.name}...`, "info");
+    this.fileEncryptBtn.disabled = true;
+
+    try {
+      const fileBytes = new Uint8Array(await file.arrayBuffer());
+      const result = await pgpHandler.encryptFile({
+        fileBytes,
+        publicKey: publicKeyArmor,
+        fileName: file.name,
+      });
+
+      if (result.success) {
+        this.downloadTextFile(result.suggestedFileName, result.encrypted);
+        showStatus(
+          statusEl,
+          `File encrypted and downloaded as ${result.suggestedFileName}`,
+          "success",
+        );
+        console.log(
+          `File encrypted and downloaded as $(result.suggestedFilename)`,
+        );
+        fileInput.value = "";
+      } else {
+        showStatus(statusEl, `Error: ${result.error}`, "error");
+      }
+    } catch (err) {
+      showStatus(statusEl, `Error: ${err.message}`, "error");
+    } finally {
+      this.fileEncryptBtn.disabled = false;
+    }
+  }
+
+  async decryptFile() {
+    const statusEl = document.getElementById("fileDecryptStatus");
+    const fileInput = document.getElementById("fileDecryptInput");
+    const fingerprint = document.getElementById("fileDecryptKeySelect").value;
+    const passphrase = document.getElementById("fileDecryptPassphrase").value;
+
+    if (!fileInput.files || !fileInput.files[0]) {
+      showStatus(statusEl, "Please select an encrypted file", "error");
+      return;
+    }
+    if (!fingerprint) {
+      showStatus(statusEl, "Please select your private key", "error");
+      return;
+    }
+    if (!passphrase) {
+      showStatus(statusEl, "Please enter your passphrase", "error");
+      return;
+    }
+
+    const file = fileInput.files[0];
+    showStatus(statusEl, `Decrypting ${file.name}...`, "info");
+    this.fileDecryptBtn.disabled = true;
+
+    try {
+      const encryptedArmor = await file.text();
+      const result = await pgpHandler.decryptFile({
+        encryptedArmor,
+        privateKeyFingerprint: fingerprint,
+        passphrase,
+      });
+
+      if (result.success) {
+        const outputFileName =
+          result.filename ||
+          file.name.replace(/\.(pgp|asc)$/i, "") ||
+          "decrypted_file";
+        this.downloadBinaryFile(outputFileName, result.data);
+        showStatus(
+          statusEl,
+          `File decrypted and downloaded as ${outputFileName}`,
+          "success",
+        );
+        fileInput.value = "";
+        document.getElementById("fileDecryptPassphrase").value = "";
+      } else {
+        showStatus(statusEl, `Error: ${result.error}`, "error");
+      }
+    } catch (err) {
+      showStatus(statusEl, `Error: ${err.message}`, "error");
+    } finally {
+      this.fileDecryptBtn.disabled = false;
+    }
+  }
+
+  downloadTextFile(filename, content) {
+    console.log("[OpenPGP UI] Downloading encrypted file:", filename);
+    const blob = new Blob([content], { type: "application/pgp-encrypted" });
+    const url = URL.createObjectURL(blob);
+    browser.downloads
+      .download({ url, filename, saveAs: true })
+      .then(() => URL.revokeObjectURL(url))
+      .catch((err) => console.error("[OpenPGP UI] File download failed:", err));
+  }
+
+  downloadBinaryFile(filename, data) {
+    console.log("[OpenPGP UI] Downloading decrypted file:", filename);
+    const blob = new Blob([data], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    browser.downloads
+      .download({ url, filename, saveAs: true })
+      .then(() => URL.revokeObjectURL(url))
+      .catch((err) => console.error("[OpenPGP UI] File download failed:", err));
+  }
+}
+
+/**
  * Initialize all controllers when DOM is ready
  */
 document.addEventListener("DOMContentLoaded", () => {
@@ -1919,6 +2173,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const decryptionController = new DecryptionController();
   const signingController = new SigningController();
   const verificationController = new VerificationController();
+  fileController = new FileController();
   const settingsController = new SettingsController();
 
   // Set up debug mode toggle
