@@ -12,13 +12,15 @@ logger.log("OpenPGP Background", "Background script initializing");
 
 /**
  * Browser action (toolbar icon) click handler
- * Opens the sidebar when the toolbar icon is clicked
+ * On desktop: opens the sidebar. On Android: popup opens automatically via manifest default_popup.
  */
 browser.browserAction.onClicked.addListener(() => {
   logger.log("OpenPGP Background", "Toolbar icon clicked, opening sidebar");
-  browser.sidebarAction.open().catch((err) => {
-    logger.error("OpenPGP Background", "Failed to open sidebar:", err);
-  });
+  if (browser.sidebarAction) {
+    browser.sidebarAction.open().catch((err) => {
+      logger.error("OpenPGP Background", "Failed to open sidebar:", err);
+    });
+  }
 });
 
 /**
@@ -37,10 +39,12 @@ browser.runtime.onInstalled.addListener((details) => {
       firegpg_install_date: Date.now(),
     });
 
-    // Open sidebar on installation
-    browser.sidebarAction.open().catch((err) => {
-      logger.error("OpenPGP Background", "Failed to open sidebar:", err);
-    });
+    // Open sidebar on installation (desktop only)
+    if (browser.sidebarAction) {
+      browser.sidebarAction.open().catch((err) => {
+        logger.error("OpenPGP Background", "Failed to open sidebar:", err);
+      });
+    }
   } else if (details.reason === "update") {
     logger.log(
       "OpenPGP Background",
@@ -107,19 +111,24 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
 
     case "openSidebar":
-      // Request to open the sidebar
+      // Request to open the sidebar (desktop only)
       logger.log("OpenPGP Background", "Opening sidebar");
-      browser.sidebarAction
-        .open()
-        .then(() => {
-          logger.log("OpenPGP Background", "Sidebar opened");
-          sendResponse({ success: true });
-        })
-        .catch((error) => {
-          logger.error("OpenPGP Background", "Error opening sidebar:", error);
-          sendResponse({ success: false, error: error.message });
-        });
-      return true;
+      if (browser.sidebarAction) {
+        browser.sidebarAction
+          .open()
+          .then(() => {
+            logger.log("OpenPGP Background", "Sidebar opened");
+            sendResponse({ success: true });
+          })
+          .catch((error) => {
+            logger.error("OpenPGP Background", "Error opening sidebar:", error);
+            sendResponse({ success: false, error: error.message });
+          });
+        return true;
+      } else {
+        sendResponse({ success: true }); // no-op on Android
+      }
+      break;
 
     case "lockMasterPassword":
       // Another component requesting a lock (e.g. suspend)
@@ -144,143 +153,151 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
- * Create context menu items for PGP operations
+ * Create context menu items for PGP operations (desktop only — not supported on Android)
  */
-browser.contextMenus.create(
-  {
-    id: "OpenPGP-encrypt-selection",
-    title: "Encrypt selected text with PGP",
-    contexts: ["selection"],
-  },
-  () => {
-    if (browser.runtime.lastError) {
-      logger.error(
-        "OpenPGP Background",
-        "Context menu creation failed:",
-        browser.runtime.lastError,
-      );
-    } else {
-      logger.log(
-        "OpenPGP Background",
-        "Context menu created: encrypt-selection",
-      );
-    }
-  },
-);
+if (browser.contextMenus) {
+  browser.contextMenus.create(
+    {
+      id: "OpenPGP-encrypt-selection",
+      title: "Encrypt selected text with PGP",
+      contexts: ["selection"],
+    },
+    () => {
+      if (browser.runtime.lastError) {
+        logger.error(
+          "OpenPGP Background",
+          "Context menu creation failed:",
+          browser.runtime.lastError,
+        );
+      } else {
+        logger.log(
+          "OpenPGP Background",
+          "Context menu created: encrypt-selection",
+        );
+      }
+    },
+  );
 
-browser.contextMenus.create(
-  {
-    id: "OpenPGP-decrypt-selection",
-    title: "Decrypt selected text with PGP",
-    contexts: ["selection"],
-  },
-  () => {
-    if (browser.runtime.lastError) {
-      logger.error(
-        "OpenPGP Background",
-        "Context menu creation failed:",
-        browser.runtime.lastError,
-      );
-    } else {
-      logger.log(
-        "OpenPGP Background",
-        "Context menu created: decrypt-selection",
-      );
-    }
-  },
-);
+  browser.contextMenus.create(
+    {
+      id: "OpenPGP-decrypt-selection",
+      title: "Decrypt selected text with PGP",
+      contexts: ["selection"],
+    },
+    () => {
+      if (browser.runtime.lastError) {
+        logger.error(
+          "OpenPGP Background",
+          "Context menu creation failed:",
+          browser.runtime.lastError,
+        );
+      } else {
+        logger.log(
+          "OpenPGP Background",
+          "Context menu created: decrypt-selection",
+        );
+      }
+    },
+  );
 
-browser.contextMenus.create(
-  {
-    id: "OpenPGP-verify-selection",
-    title: "Verify PGP signature",
-    contexts: ["selection"],
-  },
-  () => {
-    if (browser.runtime.lastError) {
-      logger.error(
-        "OpenPGP Background",
-        "Context menu creation failed:",
-        browser.runtime.lastError,
-      );
-    } else {
-      logger.log(
-        "OpenPGP Background",
-        "Context menu created: verify-selection",
-      );
+  browser.contextMenus.create(
+    {
+      id: "OpenPGP-verify-selection",
+      title: "Verify PGP signature",
+      contexts: ["selection"],
+    },
+    () => {
+      if (browser.runtime.lastError) {
+        logger.error(
+          "OpenPGP Background",
+          "Context menu creation failed:",
+          browser.runtime.lastError,
+        );
+      } else {
+        logger.log(
+          "OpenPGP Background",
+          "Context menu created: verify-selection",
+        );
+      }
+    },
+  );
+
+  /**
+   * Context menu click handler
+   */
+  browser.contextMenus.onClicked.addListener((info, tab) => {
+    logger.log("OpenPGP Background", "Context menu clicked:", info.menuItemId);
+
+    switch (info.menuItemId) {
+      case "OpenPGP-encrypt-selection":
+        logger.log("OpenPGP Background", "Encrypt selection requested");
+        // Open sidebar and send selected text
+        if (browser.sidebarAction) {
+          browser.sidebarAction.open().then(() => {
+            browser.runtime
+              .sendMessage({
+                type: "prefill-encrypt",
+                text: info.selectionText,
+              })
+              .catch((err) => {
+                logger.log("OpenPGP Background", "Sidebar not ready yet:", err);
+              });
+          });
+        }
+        break;
+
+      case "OpenPGP-decrypt-selection":
+        logger.log("OpenPGP Background", "Decrypt selection requested");
+        if (browser.sidebarAction) {
+          browser.sidebarAction.open().then(() => {
+            browser.runtime
+              .sendMessage({
+                type: "prefill-decrypt",
+                text: info.selectionText,
+              })
+              .catch((err) => {
+                logger.log("OpenPGP Background", "Sidebar not ready yet:", err);
+              });
+          });
+        }
+        break;
+
+      case "OpenPGP-verify-selection":
+        logger.log("OpenPGP Background", "Verify selection requested");
+        if (browser.sidebarAction) {
+          browser.sidebarAction.open().then(() => {
+            browser.runtime
+              .sendMessage({
+                type: "prefill-verify",
+                text: info.selectionText,
+              })
+              .catch((err) => {
+                logger.log("OpenPGP Background", "Sidebar not ready yet:", err);
+              });
+          });
+        }
+        break;
     }
-  },
-);
+  });
+} // end if (browser.contextMenus)
 
 /**
- * Context menu click handler
- */
-browser.contextMenus.onClicked.addListener((info, tab) => {
-  logger.log("OpenPGP Background", "Context menu clicked:", info.menuItemId);
-
-  switch (info.menuItemId) {
-    case "OpenPGP-encrypt-selection":
-      logger.log("OpenPGP Background", "Encrypt selection requested");
-      // Open sidebar and send selected text
-      browser.sidebarAction.open().then(() => {
-        // Send message to sidebar to prefill encryption form
-        // Note: sidebar needs to be listening for this message
-        browser.runtime
-          .sendMessage({
-            type: "prefill-encrypt",
-            text: info.selectionText,
-          })
-          .catch((err) => {
-            logger.log("OpenPGP Background", "Sidebar not ready yet:", err);
-          });
-      });
-      break;
-
-    case "OpenPGP-decrypt-selection":
-      logger.log("OpenPGP Background", "Decrypt selection requested");
-      browser.sidebarAction.open().then(() => {
-        browser.runtime
-          .sendMessage({
-            type: "prefill-decrypt",
-            text: info.selectionText,
-          })
-          .catch((err) => {
-            logger.log("OpenPGP Background", "Sidebar not ready yet:", err);
-          });
-      });
-      break;
-
-    case "OpenPGP-verify-selection":
-      logger.log("OpenPGP Background", "Verify selection requested");
-      browser.sidebarAction.open().then(() => {
-        browser.runtime
-          .sendMessage({
-            type: "prefill-verify",
-            text: info.selectionText,
-          })
-          .catch((err) => {
-            logger.log("OpenPGP Background", "Sidebar not ready yet:", err);
-          });
-      });
-      break;
-  }
-});
-
-/**
- * Browser action (toolbar icon) click handler
+ * Browser action (toolbar icon) click handler (desktop only)
+ * On Android the popup opens automatically; this handler only fires when no default_popup is set.
  */
 browser.browserAction.onClicked.addListener((tab) => {
   logger.log("OpenPGP Background", "Toolbar icon clicked");
 
-  // Toggle sidebar
-  browser.sidebarAction
-    .toggle()
-    .then(() => {
-      logger.log("OpenPGP Background", "Sidebar toggled");
-    })
-    .catch((err) => {
-      logger.error("OpenPGP Background", "Failed to toggle sidebar:", err);
-    });
+  if (browser.sidebarAction) {
+    browser.sidebarAction
+      .toggle()
+      .then(() => {
+        logger.log("OpenPGP Background", "Sidebar toggled");
+      })
+      .catch((err) => {
+        logger.error("OpenPGP Background", "Failed to toggle sidebar:", err);
+      });
+  }
 });
 
 /**

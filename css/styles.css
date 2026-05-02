@@ -48,6 +48,9 @@ body {
   color: var(--text-color);
   background-color: var(--bg-color);
   padding: var(--spacing-md);
+  /* Ensure the popup has a usable size on Android and desktop popup mode */
+  min-width: 340px;
+  min-height: 480px;
 }
 
 /* ===== Container ===== */
