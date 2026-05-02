@@ -655,6 +655,7 @@ class KeyManagement {
 
         // Refresh keys list
         await this.refreshKeys();
+        await this.refreshPublicKeys();
         incrementUsageCount();
       } else {
         logger.error("OpenPGP UI", "Key generation failed:", result.error);
@@ -804,16 +805,33 @@ class KeyManagement {
         this.publickeysList.innerHTML =
           '<p class="text-muted">No imported public keys found. Import a few first.</p>';
       } else {
+        // Fetch private keys so we can identify which public keys are "our own"
+        const privateKeys = await pgpHandler.getAllKeys();
+        const privateFingerprints = new Set(
+          privateKeys.map((k) => k.fingerprint),
+        );
+
         // Build public keys display
         let html = "";
 
         publicKeys.forEach((key) => {
+          const isOwnKey = privateFingerprints.has(key.fingerprint);
+          const shortFp = key.fingerprint.substring(0, 16);
+          const ownKeyBadge = isOwnKey
+            ? `<span class="own-key-badge" title="This public key matches one of your private keys">🔑 My Public Key</span>`
+            : "";
+          const ownKeyNote = isOwnKey
+            ? `<br><small class="own-key-note">This is the public key of your own private key <code>${shortFp}…</code></small>`
+            : "";
+
           html += `
-      <div class="key-item" data-fingerprint="${key.fingerprint}">
+      <div class="key-item${isOwnKey ? " key-item-own" : ""}" data-fingerprint="${key.fingerprint}">
           <div class="key-info">
               <strong>${this.escapeHtml(key.name)}</strong> &lt;${this.escapeHtml(key.email)}&gt;
+              ${ownKeyBadge}
               <br>
               <small>Fingerprint: <code>${key.fingerprint}</code></small>
+              ${ownKeyNote}
               <br>
               <small>Imported: ${new Date(key.created).toLocaleString()}</small>
           </div>
@@ -869,19 +887,42 @@ class KeyManagement {
 
     try {
       const publicKeys = await pgpHandler.getAllPublicKeys();
+      const privateKeys = await pgpHandler.getAllKeys();
+      const privateFingerprints = new Set(
+        privateKeys.map((k) => k.fingerprint),
+      );
       const dropdown = document.getElementById("verifyRecipientsPublicKey");
 
       // Clear existing options except the first one
       dropdown.innerHTML =
         '<option value="">-- Select an imported public key --</option>';
 
-      // Add options for each public key
-      publicKeys.forEach((key) => {
+      const otherKeys = publicKeys.filter(
+        (k) => !privateFingerprints.has(k.fingerprint),
+      );
+      const ownKeys = publicKeys.filter((k) =>
+        privateFingerprints.has(k.fingerprint),
+      );
+
+      otherKeys.forEach((key) => {
         const option = document.createElement("option");
         option.value = key.fingerprint;
         option.textContent = `${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
         dropdown.appendChild(option);
       });
+
+      if (ownKeys.length > 0) {
+        const sep = document.createElement("option");
+        sep.disabled = true;
+        sep.textContent = "── My own keys ──";
+        dropdown.appendChild(sep);
+        ownKeys.forEach((key) => {
+          const option = document.createElement("option");
+          option.value = key.fingerprint;
+          option.textContent = `[My Key] ${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
+          dropdown.appendChild(option);
+        });
+      }
 
       logger.log(
         "OpenPGP UI",
@@ -901,19 +942,42 @@ class KeyManagement {
 
     try {
       const publicKeys = await pgpHandler.getAllPublicKeys();
-      const dropdown = document.getElementById("fileEncryptRecipientSelect");
+      const privateKeys = await pgpHandler.getAllKeys();
+      const privateFingerprints = new Set(
+        privateKeys.map((k) => k.fingerprint),
+      );
+      const dropdown = document.getElementById("encryptRecipientSelect");
 
       // Clear existing options except the first one
       dropdown.innerHTML =
         '<option value="">-- Select an imported public key --</option>';
 
-      // Add options for each public key
-      publicKeys.forEach((key) => {
+      const otherKeys = publicKeys.filter(
+        (k) => !privateFingerprints.has(k.fingerprint),
+      );
+      const ownKeys = publicKeys.filter((k) =>
+        privateFingerprints.has(k.fingerprint),
+      );
+
+      otherKeys.forEach((key) => {
         const option = document.createElement("option");
         option.value = key.fingerprint;
         option.textContent = `${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
         dropdown.appendChild(option);
       });
+
+      if (ownKeys.length > 0) {
+        const sep = document.createElement("option");
+        sep.disabled = true;
+        sep.textContent = "── My own keys ──";
+        dropdown.appendChild(sep);
+        ownKeys.forEach((key) => {
+          const option = document.createElement("option");
+          option.value = key.fingerprint;
+          option.textContent = `[My Key] ${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
+          dropdown.appendChild(option);
+        });
+      }
 
       logger.log(
         "OpenPGP UI",
@@ -934,19 +998,43 @@ class KeyManagement {
 
     try {
       const publicKeys = await pgpHandler.getAllPublicKeys();
-      const dropdown = document.getElementById("fileDecryptKeySelect");
+      const privateKeys = await pgpHandler.getAllKeys();
+      const privateFingerprints = new Set(
+        privateKeys.map((k) => k.fingerprint),
+      );
+      const dropdown = document.getElementById("decryptVerifyKeySelect");
+      if (!dropdown) return;
 
       // Clear existing options except the first one
       dropdown.innerHTML =
         '<option value="">-- Select an imported public key (optional) --</option>';
 
-      // Add options for each public key
-      publicKeys.forEach((key) => {
+      const otherKeys = publicKeys.filter(
+        (k) => !privateFingerprints.has(k.fingerprint),
+      );
+      const ownKeys = publicKeys.filter((k) =>
+        privateFingerprints.has(k.fingerprint),
+      );
+
+      otherKeys.forEach((key) => {
         const option = document.createElement("option");
         option.value = key.fingerprint;
         option.textContent = `${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
         dropdown.appendChild(option);
       });
+
+      if (ownKeys.length > 0) {
+        const sep = document.createElement("option");
+        sep.disabled = true;
+        sep.textContent = "── My own keys ──";
+        dropdown.appendChild(sep);
+        ownKeys.forEach((key) => {
+          const option = document.createElement("option");
+          option.value = key.fingerprint;
+          option.textContent = `[My Key] ${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
+          dropdown.appendChild(option);
+        });
+      }
 
       logger.log(
         "OpenPGP UI",
@@ -1167,6 +1255,7 @@ class KeyManagement {
           document.getElementById("importPassphrase").value = "";
 
           await this.refreshKeys();
+          await this.refreshPublicKeys();
         } else {
           logger.error(
             "OpenPGP UI",
@@ -1997,18 +2086,41 @@ class FileController {
     );
     // Public keys for file encryption
     const publicKeys = await pgpHandler.getAllPublicKeys();
+    const privateKeys = await pgpHandler.getAllKeys();
+    const privateFingerprints = new Set(privateKeys.map((k) => k.fingerprint));
+
     const encDropdown = document.getElementById("fileEncryptRecipientSelect");
     encDropdown.innerHTML =
       '<option value="">-- Select an imported public key --</option>';
-    publicKeys.forEach((key) => {
+
+    const otherPubKeys = publicKeys.filter(
+      (k) => !privateFingerprints.has(k.fingerprint),
+    );
+    const ownPubKeys = publicKeys.filter((k) =>
+      privateFingerprints.has(k.fingerprint),
+    );
+
+    otherPubKeys.forEach((key) => {
       const option = document.createElement("option");
       option.value = key.fingerprint;
       option.textContent = `${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
       encDropdown.appendChild(option);
     });
 
+    if (ownPubKeys.length > 0) {
+      const sep = document.createElement("option");
+      sep.disabled = true;
+      sep.textContent = "── My own keys ──";
+      encDropdown.appendChild(sep);
+      ownPubKeys.forEach((key) => {
+        const option = document.createElement("option");
+        option.value = key.fingerprint;
+        option.textContent = `[My Key] ${key.name} <${key.email}> (${key.fingerprint.substring(0, 16)}...)`;
+        encDropdown.appendChild(option);
+      });
+    }
+
     // Private keys for file decryption
-    const privateKeys = await pgpHandler.getAllKeys();
     const decDropdown = document.getElementById("fileDecryptKeySelect");
     decDropdown.innerHTML = "";
     if (privateKeys.length === 0) {

@@ -628,6 +628,29 @@ label:has(input[type="radio"]) {
   margin-bottom: var(--spacing-sm);
 }
 
+.key-item-own {
+  border-color: #0066cc;
+  border-left: 4px solid #0066cc;
+  background: #f0f7ff;
+}
+
+.own-key-badge {
+  display: inline-block;
+  background: #0066cc;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.own-key-note {
+  color: #0052a3 !important;
+  font-style: italic;
+}
+
 .key-info {
   margin-bottom: var(--spacing-sm);
 }

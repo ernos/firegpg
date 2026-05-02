@@ -248,6 +248,16 @@ class PGPHandler {
       // Store the key
       await this.storeKey(keyData);
 
+      // Also store the public key in the public keys list so it appears in dropdowns
+      await this.storePublicKey({
+        name,
+        email,
+        publicKey,
+        fingerprint,
+        keyID,
+        created: keyData.created,
+      });
+
       debugLog("Key stored successfully");
 
       return {
@@ -309,6 +319,35 @@ class PGPHandler {
       errorLog("Failed to store key", error);
       throw error;
     }
+  }
+
+  /**
+   * Check if fingerprint belongs to one of users private keys
+   * This is used when displaying public keys - to handle how to display it
+   * @returns {Object|null} The matching private key data, or null
+   */
+  async isFingerprintMyKey(fingerprint) {
+    debugLog(
+      "Checking if fingerprint '" + fingerprint + "' is one of our keys",
+    );
+
+    const myPrivateKey = await this.getKeyByFingerprint(fingerprint);
+
+    if (myPrivateKey) {
+      debugLog(
+        "isFingerprintMyKey('" +
+          fingerprint +
+          "') Fingerprint belongs to one of the users keypairs.",
+      );
+    } else {
+      debugLog(
+        "isFingerprintMyKey('" +
+          fingerprint +
+          "') Fingerprint is not one of users keypairs.",
+      );
+    }
+
+    return myPrivateKey || null;
   }
 
   /**
@@ -426,6 +465,17 @@ class PGPHandler {
       };
 
       await this.storeKey(keyData);
+
+      // Also store the public key in the public keys list so it appears in dropdowns
+      await this.storePublicKey({
+        name,
+        email,
+        publicKey,
+        fingerprint,
+        keyID,
+        created: keyData.created,
+        imported: true,
+      });
 
       debugLog("Private key imported and stored");
 
